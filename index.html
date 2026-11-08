@@ -6,6 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Akış">
 <meta name="theme-color" content="#121212">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>Akış — kelime kelime okuyucu</title>
 <style>
   :root{
@@ -872,6 +874,11 @@ function confirmDialog(msg, okLabel, onOk){
 
 /* ========================================================= */
 (async () => { await loadSettings(); renderLibrary(); })();
+
+/* Çevrimdışı: service worker (GitHub Pages'te çalışır; artifact sandbox'ında sessizce atlanır) */
+if("serviceWorker" in navigator && window.isSecureContext){
+  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
 </script>
 </body>
 </html>
