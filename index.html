@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Akış">
+<meta name="theme-color" content="#121212">
+<title>Akış — kelime kelime okuyucu</title>
+<style>
+  :root{
+    --bg:#121212; --fg:#e9e6df; --muted:#8d8a84; --line:#2a2a2a; --card:#1b1b1b;
+    --accent:#e0533d; --btn:#242424; --btnfg:#e9e6df; --hl:#3a2f1c;
+    --fs:64px;
+    --serif:"Iowan Old Style","Palatino","Georgia",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+  }
+  body.sepya{ --bg:#f3ead8; --fg:#3b3226; --muted:#8a7d68; --line:#ddd0b6; --card:#ebe0ca; --btn:#e4d7bd; --btnfg:#3b3226; --accent:#c0392b; --hl:#f0d9a0; }
+  body.acik{ --bg:#fbfbf9; --fg:#1d1d1d; --muted:#8b8b8b; --line:#e4e4e0; --card:#f1f1ed; --btn:#ececE8; --btnfg:#1d1d1d; --accent:#d23b26; --hl:#ffe9a8; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; height:100%; background:var(--bg); color:var(--fg); font-family:var(--sans)}
+  body{overscroll-behavior:none}
+  button{font:inherit; color:var(--btnfg); background:var(--btn); border:0; border-radius:12px; padding:10px 14px; cursor:pointer; touch-action:manipulation}
+  button:active{opacity:.7}
+  .ghost{background:transparent}
+  .hidden{display:none !important}
+
+  /* ---------- Kütüphane ---------- */
+  #library{max-width:860px; margin:0 auto; padding:28px 20px 60px}
+  .libhead{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:22px}
+  .libhead h1{font-family:var(--serif); font-weight:600; font-size:34px; margin:0; letter-spacing:.2px}
+  .libhead h1 span{color:var(--accent)}
+  .addbtn{background:var(--accent); color:#fff; font-weight:600; padding:12px 18px}
+  #books{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px}
+  .book{background:var(--card); border-radius:16px; padding:16px 16px 14px; cursor:pointer; position:relative; display:flex; flex-direction:column; gap:6px; min-height:132px}
+  .book .t{font-family:var(--serif); font-size:19px; line-height:1.25; font-weight:600; padding-right:28px}
+  .book .a{color:var(--muted); font-size:14px}
+  .book .meta{margin-top:auto; font-size:13px; color:var(--muted); display:flex; justify-content:space-between}
+  .book .bar{height:4px; background:var(--line); border-radius:3px; overflow:hidden}
+  .book .bar i{display:block; height:100%; background:var(--accent)}
+  .book .del{position:absolute; top:8px; right:6px; padding:6px 10px; background:transparent; color:var(--muted); font-size:18px}
+  .empty{color:var(--muted); text-align:center; padding:60px 20px; border:2px dashed var(--line); border-radius:18px; line-height:1.6}
+  .empty b{color:var(--fg)}
+  #status{margin:14px 0; color:var(--muted); font-size:14px; min-height:20px}
+  .note{color:var(--muted); font-size:13px; margin-top:26px; line-height:1.5}
+
+  /* ---------- Okuyucu ---------- */
+  #reader{position:fixed; inset:0; display:flex; flex-direction:column}
+  .topbar{display:flex; align-items:center; gap:8px; padding:12px 14px; transition:opacity .4s}
+  .topbar .title{flex:1; min-width:0; text-align:center; font-size:14px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .playing .topbar, .playing .bottom, .playing #context{opacity:.08}
+  .playing .topbar:hover, .playing .bottom:hover{opacity:1}
+
+  #stage{flex:1; display:flex; flex-direction:column; justify-content:center; align-items:stretch; position:relative; user-select:none; -webkit-user-select:none; cursor:pointer; min-height:0}
+  .guide{height:18px; position:relative; margin:0 auto; width:min(92vw,1100px)}
+  .guide::before{content:""; position:absolute; left:0; right:0; top:50%; height:1px; background:var(--line)}
+  .guide::after{content:""; position:absolute; left:50%; width:2px; height:100%; background:var(--line); transform:translateX(-1px)}
+  .guide.top::after{top:0} .guide.bot::after{bottom:0}
+  #word{display:grid; grid-template-columns:1fr auto 1fr; align-items:baseline; width:min(92vw,1100px); margin:0 auto; font-family:var(--serif); font-size:var(--fs); line-height:1.35; padding:.12em 0; white-space:pre}
+  #word .l{text-align:right; overflow:hidden}
+  #word .p{color:var(--accent)}
+  #word .r{text-align:left; overflow:hidden}
+  #word.sans{font-family:var(--sans)}
+  #hint{position:absolute; bottom:18px; left:0; right:0; text-align:center; color:var(--muted); font-size:13px}
+
+  #context{max-height:32vh; overflow:auto; margin:0 auto; width:min(92vw,760px); padding:4px 4px 10px; font-family:var(--serif); font-size:18px; line-height:1.6; color:var(--muted); transition:opacity .4s}
+  #context .w{cursor:pointer; border-radius:4px}
+  #context .w.cur{background:var(--hl); color:var(--fg)}
+
+  .bottom{padding:8px 16px 16px; transition:opacity .4s; padding-bottom:max(16px, env(safe-area-inset-bottom))}
+  .progress{display:flex; align-items:center; gap:10px; font-size:13px; color:var(--muted); margin-bottom:10px}
+  .progress input{flex:1}
+  input[type=range]{accent-color:var(--accent); height:28px}
+  .controls{display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap}
+  .controls .big{width:72px; height:72px; border-radius:50%; font-size:28px; background:var(--accent); color:#fff; display:grid; place-items:center; padding:0}
+  .controls .nav{width:56px; height:56px; border-radius:50%; font-size:20px; display:grid; place-items:center; padding:0}
+  .wpm{display:flex; align-items:center; gap:6px; background:var(--btn); border-radius:14px; padding:4px}
+  .wpm button{padding:8px 12px; background:transparent; font-size:18px}
+  .wpm b{min-width:74px; text-align:center; font-variant-numeric:tabular-nums; font-size:15px}
+  .wpm small{color:var(--muted); font-weight:400}
+
+  /* ---------- Paneller ---------- */
+  .sheet-bg{position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:flex-end; justify-content:center; z-index:20}
+  .sheet{background:var(--card); color:var(--fg); width:min(640px,100%); max-height:82vh; overflow:auto; border-radius:20px 20px 0 0; padding:18px 20px 28px}
+  .sheet h2{margin:0 0 14px; font-size:18px; font-family:var(--serif)}
+  .sheet .row{display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 0; border-bottom:1px solid var(--line)}
+  .sheet .row label{font-size:15px}
+  .sheet .row small{display:block; color:var(--muted); font-size:12px; margin-top:2px}
+  .seg{display:flex; background:var(--btn); border-radius:12px; padding:3px}
+  .seg button{background:transparent; padding:8px 12px; border-radius:10px; font-size:14px}
+  .seg button.on{background:var(--accent); color:#fff}
+  .switch{width:52px; height:30px; border-radius:15px; background:var(--line); position:relative; padding:0}
+  .switch::after{content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; transition:left .2s}
+  .switch.on{background:var(--accent)} .switch.on::after{left:25px}
+  .chap{display:block; width:100%; text-align:left; background:transparent; border-bottom:1px solid var(--line); border-radius:0; padding:13px 4px; font-size:15px}
+  .chap.cur{color:var(--accent); font-weight:600}
+  .chap span{float:right; color:var(--muted); font-size:13px}
+  .dialog{background:var(--card); border-radius:18px; padding:22px; width:min(380px,92vw); margin:auto; text-align:center}
+  .dialog p{margin:0 0 18px; line-height:1.5}
+  .dialog .acts{display:flex; gap:10px; justify-content:center}
+  .danger{background:var(--accent); color:#fff}
+
+  /* ---------- Sayfa modu ---------- */
+  #pageView{flex:1; display:flex; min-height:0; padding:6px 0 4px; position:relative}
+  #pageViewport{overflow:hidden; margin:0 auto; height:100%; position:relative}
+  #pageCols{height:100%; column-fill:auto; font-family:var(--serif); font-size:var(--pfs,20px); line-height:var(--plh,1.6); hyphens:auto; -webkit-hyphens:auto; text-align:justify; transition:transform .22s ease; will-change:transform}
+  #pageCols.sans{font-family:var(--sans)}
+  #pageCols p{margin:0 0 .2em; text-indent:1.4em}
+  #pageCols p.first{text-indent:0}
+  #pageCols h3{font-size:1.25em; text-align:center; margin:.6em 0 1.2em; font-weight:600; text-indent:0; break-after:avoid}
+  #pageCols .w.cur{background:var(--hl); border-radius:3px}
+  .tapzone{position:absolute; top:0; bottom:0; width:30%; z-index:2}
+  .tapzone.l{left:0} .tapzone.r{right:0}
+  .pagectl{display:flex; align-items:center; justify-content:center; gap:14px}
+  .pagectl b{font-weight:500; font-size:14px; color:var(--muted); min-width:120px; text-align:center; font-variant-numeric:tabular-nums}
+  .modebtn{font-weight:600}
+  body.chromeoff .page-mode .topbar, body.chromeoff .page-mode .bottom{opacity:0; pointer-events:none}
+</style>
+</head>
+<body>
+
+<!-- ====== Kütüphane ====== -->
+<section id="library">
+  <div class="libhead">
+    <h1>Akış<span>.</span></h1>
+    <button class="addbtn" id="addBtn">+ EPUB ekle</button>
+    <input type="file" id="fileIn" multiple class="hidden">
+  </div>
+  <div id="status"></div>
+  <div id="books"></div>
+  <p class="note">Kitaplar ve kaldığın yerler yalnızca bu tarayıcıda saklanır. Safari'nin geçmişini/site verilerini silersen kütüphane boşalır; EPUB dosyaların ise olduğu yerde kalır, yeniden eklemen yeterli. DRM'li (satın alınmış) kitaplar açılmaz.</p>
+</section>
+
+<!-- ====== Okuyucu ====== -->
+<section id="reader" class="hidden">
+  <div class="topbar">
+    <button class="ghost" id="backBtn">‹ Kitaplar</button>
+    <div class="title" id="rTitle"></div>
+    <button class="modebtn" id="modeBtn">Sayfa</button>
+    <button class="ghost" id="chapBtn">Bölümler</button>
+    <button class="ghost" id="setBtn">Aa</button>
+  </div>
+
+  <div id="stage">
+    <div class="guide top"></div>
+    <div id="word"><span class="l"></span><span class="p"></span><span class="r"></span></div>
+    <div class="guide bot"></div>
+    <div id="hint">Başlatmak/durdurmak için dokun</div>
+  </div>
+
+  <div id="context"></div>
+
+  <div id="pageView" class="hidden">
+    <div class="tapzone l" id="tapL"></div>
+    <div id="pageViewport"><div id="pageCols"></div></div>
+    <div class="tapzone r" id="tapR"></div>
+  </div>
+
+  <div class="bottom">
+    <div class="progress">
+      <span id="pChap"></span>
+      <input type="range" id="scrub" min="0" max="1" value="0" step="1">
+      <span id="pLeft"></span>
+    </div>
+    <div class="pagectl hidden" id="pageCtl">
+      <button class="nav" id="pgPrev" style="width:56px;height:56px;border-radius:50%">‹</button>
+      <b id="pgInfo"></b>
+      <button class="nav" id="pgNext" style="width:56px;height:56px;border-radius:50%">›</button>
+    </div>
+    <div class="controls" id="flowCtl">
+      <button class="nav" id="prevBtn" title="Önceki cümle">⏮</button>
+      <button class="big" id="playBtn">▶</button>
+      <button class="nav" id="nextBtn" title="Sonraki cümle">⏭</button>
+      <div class="wpm">
+        <button id="slower">−</button>
+        <b><span id="wpmVal">300</span> <small>k/dk</small></b>
+        <button id="faster">+</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="overlay" class="sheet-bg hidden"></div>
+
+<script>
+"use strict";
+/* =========================================================
+   1. Küçük ZIP okuyucu (bağımlılık yok; DecompressionStream)
+   ========================================================= */
+async function readZip(buf){
+  const dv = new DataView(buf), u8 = new Uint8Array(buf);
+  let eocd = -1;
+  for(let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 65557); i--){
+    if(dv.getUint32(i, true) === 0x06054b50){ eocd = i; break; }
+  }
+  if(eocd < 0) throw new Error("Bu dosya geçerli bir EPUB/ZIP değil.");
+  const count = dv.getUint16(eocd + 10, true);
+  let p = dv.getUint32(eocd + 16, true);
+  const dec = new TextDecoder("utf-8");
+  const entries = {};
+  for(let n = 0; n < count; n++){
+    if(dv.getUint32(p, true) !== 0x02014b50) break;
+    const method = dv.getUint16(p + 10, true);
+    const csize = dv.getUint32(p + 20, true);
+    const nlen = dv.getUint16(p + 28, true), xlen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true);
+    const loff = dv.getUint32(p + 42, true);
+    const name = dec.decode(u8.subarray(p + 46, p + 46 + nlen));
+    entries[name] = {method, csize, loff};
+    p += 46 + nlen + xlen + clen;
+  }
+  async function get(name){
+    const e = entries[name];
+    if(!e) return null;
+    const lnl = dv.getUint16(e.loff + 26, true), lxl = dv.getUint16(e.loff + 28, true);
+    const start = e.loff + 30 + lnl + lxl;
+    const data = u8.subarray(start, start + e.csize);
+    if(e.method === 0) return data;
+    if(e.method !== 8) throw new Error("Desteklenmeyen sıkıştırma: " + e.method);
+    const ds = new DecompressionStream("deflate-raw");
+    const out = new Blob([data]).stream().pipeThrough(ds);
+    return new Uint8Array(await new Response(out).arrayBuffer());
+  }
+  async function text(name){ const b = await get(name); return b ? dec.decode(b) : null; }
+  return {entries, get, text};
+}
+
+/* =========================================================
+   2. EPUB → kelime dizisi
+   ========================================================= */
+function resolvePath(base, rel){
+  rel = rel.split("#")[0];
+  try{ rel = decodeURIComponent(rel); }catch(e){}
+  if(rel.startsWith("/")) return rel.slice(1);
+  const parts = base.split("/"); parts.pop();
+  for(const seg of rel.split("/")){
+    if(seg === "..") parts.pop(); else if(seg !== "." && seg !== "") parts.push(seg);
+  }
+  return parts.join("/");
+}
+function parseXml(str, type){
+  let doc = new DOMParser().parseFromString(str, type || "application/xml");
+  if(doc.getElementsByTagName("parsererror").length) doc = new DOMParser().parseFromString(str, "text/html");
+  return doc;
+}
+function byLocal(doc, name){ return Array.from(doc.getElementsByTagNameNS("*", name)); }
+
+const BLOCK = new Set(["p","div","h1","h2","h3","h4","h5","h6","li","blockquote","section","article","tr","dd","dt","pre","figcaption","aside","header","footer","table","ul","ol","hr","td"]);
+const SKIP = new Set(["script","style","head","title","svg","math","rt","rp"]);
+
+function extractParagraphs(doc){
+  const body = doc.body || doc.getElementsByTagName("body")[0] || doc.documentElement;
+  const out = []; let cur = "";
+  const flush = () => { const t = cur.replace(/\s+/g, " ").trim(); if(t) out.push(t); cur = ""; };
+  (function walk(node){
+    for(let c = node.firstChild; c; c = c.nextSibling){
+      if(c.nodeType === 3){ cur += c.nodeValue; continue; }
+      if(c.nodeType !== 1) continue;
+      const tag = (c.localName || c.nodeName).toLowerCase();
+      if(SKIP.has(tag)) continue;
+      if(tag === "br"){ flush(); continue; }
+      if(tag === "img"){ continue; }
+      const blk = BLOCK.has(tag);
+      if(blk) flush();
+      walk(c);
+      if(blk) flush();
+    }
+  })(body);
+  flush();
+  return out;
+}
+
+async function parseEpub(file){
+  const zip = await readZip(await file.arrayBuffer());
+  const container = await zip.text("META-INF/container.xml");
+  if(!container) throw new Error("container.xml bulunamadı.");
+  const rf = byLocal(parseXml(container), "rootfile")[0];
+  const opfPath = rf && rf.getAttribute("full-path");
+  if(!opfPath) throw new Error("OPF yolu bulunamadı.");
+  const opfStr = await zip.text(opfPath);
+  if(!opfStr) throw new Error("OPF okunamadı.");
+  const opf = parseXml(opfStr);
+
+  if(zip.entries["META-INF/encryption.xml"]){
+    const enc = await zip.text("META-INF/encryption.xml");
+    if(enc && /EncryptedData/i.test(enc) && !/font/i.test(enc.replace(/<[^>]*obfuscation[^>]*>/gi,""))) {
+      throw new Error("Bu kitap DRM ile korunuyor, açılamıyor.");
+    }
+  }
+
+  const title = (byLocal(opf, "title")[0] || {}).textContent || file.name.replace(/\.epub$/i, "");
+  const author = (byLocal(opf, "creator")[0] || {}).textContent || "";
+  const manifest = {};
+  let navHref = null, ncxHref = null;
+  for(const it of byLocal(opf, "item")){
+    const id = it.getAttribute("id"), href = it.getAttribute("href"), mt = it.getAttribute("media-type") || "";
+    manifest[id] = {href: resolvePath(opfPath, href), mt};
+    if((it.getAttribute("properties") || "").split(/\s+/).includes("nav")) navHref = resolvePath(opfPath, href);
+    if(mt === "application/x-dtbncx+xml") ncxHref = resolvePath(opfPath, href);
+  }
+  const spineEl = byLocal(opf, "spine")[0];
+  if(!ncxHref && spineEl && spineEl.getAttribute("toc") && manifest[spineEl.getAttribute("toc")]) ncxHref = manifest[spineEl.getAttribute("toc")].href;
+  const spine = byLocal(opf, "itemref").filter(r => r.getAttribute("linear") !== "no").map(r => manifest[r.getAttribute("idref")]).filter(Boolean);
+
+  // İçindekiler → dosya başına başlık
+  const tocTitle = {};
+  try{
+    if(navHref){
+      const nav = parseXml(await zip.text(navHref), "application/xhtml+xml");
+      const navs = byLocal(nav, "nav");
+      const tocNav = navs.find(n => (n.getAttribute("epub:type") || n.getAttributeNS("http://www.idpf.org/2007/ops","type") || "").includes("toc")) || navs[0];
+      if(tocNav) for(const a of byLocal(tocNav, "a")){
+        const h = a.getAttribute("href"); if(!h) continue;
+        const k = resolvePath(navHref, h);
+        if(!tocTitle[k]) tocTitle[k] = a.textContent.replace(/\s+/g, " ").trim();
+      }
+    }
+    if(!Object.keys(tocTitle).length && ncxHref){
+      const ncx = parseXml(await zip.text(ncxHref));
+      for(const np of byLocal(ncx, "navPoint")){
+        const lbl = byLocal(np, "text")[0], ct = byLocal(np, "content")[0];
+        if(!lbl || !ct) continue;
+        const k = resolvePath(ncxHref, ct.getAttribute("src") || "");
+        if(!tocTitle[k]) tocTitle[k] = lbl.textContent.replace(/\s+/g, " ").trim();
+      }
+    }
+  }catch(e){ /* içindekiler isteğe bağlı */ }
+
+  const words = []; const flags = []; const chapters = [];
+  let n = 0;
+  for(const item of spine){
+    if(!/html|xml/i.test(item.mt) && !/\.x?html?$/i.test(item.href)) continue;
+    const src = await zip.text(item.href); if(!src) continue;
+    const doc = parseXml(src, "application/xhtml+xml");
+    const paras = extractParagraphs(doc);
+    const start = words.length;
+    for(const para of paras){
+      const ws = para.split(" ").filter(Boolean);
+      for(const w of ws){ words.push(w); flags.push(0); }
+      if(ws.length) flags[flags.length - 1] |= 1; // paragraf sonu
+    }
+    if(words.length === start) continue;
+    n++;
+    let t = tocTitle[item.href];
+    if(!t){ const h = doc.querySelector && doc.querySelector("h1,h2,h3,title"); t = h ? h.textContent.replace(/\s+/g," ").trim() : ""; }
+    if(!t || t.length > 80) t = (t ? t.slice(0, 60) + "…" : "Bölüm " + n);
+    chapters.push({title: t, start});
+  }
+  if(!words.length) throw new Error("Kitapta okunabilir metin bulunamadı.");
+  return {
+    id: "b" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    title: title.trim(), author: author.trim(), words, flags: new Uint8Array(flags), chapters,
+    added: Date.now()
+  };
+}
+
+/* =========================================================
+   3. Depolama (IndexedDB; yoksa yalnızca bellekte)
+   ========================================================= */
+const store = (() => {
+  let dbp = null; const mem = {books:{}, pos:{}, kv:{}};
+  function open(){
+    if(dbp) return dbp;
+    dbp = new Promise((res) => {
+      try{
+        const r = indexedDB.open("akis-okuyucu", 1);
+        r.onupgradeneeded = () => {
+          const db = r.result;
+          db.createObjectStore("books", {keyPath:"id"});
+          db.createObjectStore("pos"); db.createObjectStore("kv");
+        };
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => res(null);
+      }catch(e){ res(null); }
+    });
+    return dbp;
+  }
+  async function tx(name, mode, fn){
+    const db = await open();
+    if(!db) return fn(null);
+    return new Promise((res) => {
+      try{
+        const t = db.transaction(name, mode); const s = t.objectStore(name);
+        const r = fn(s);
+        t.oncomplete = () => res(r && "result" in r ? r.result : undefined);
+        t.onerror = t.onabort = () => res(undefined);
+      }catch(e){ res(undefined); }
+    });
+  }
+  return {
+    persistent: async () => !!(await open()),
+    putBook: b => tx("books","readwrite", s => s ? s.put(b) : (mem.books[b.id] = b, null)),
+    getBook: id => tx("books","readonly", s => s ? s.get(id) : {result: mem.books[id]}),
+    delBook: id => tx("books","readwrite", s => s ? s.delete(id) : (delete mem.books[id], null)),
+    allBooks: () => tx("books","readonly", s => s ? s.getAll() : {result: Object.values(mem.books)}),
+    setPos: (id, v) => tx("pos","readwrite", s => s ? s.put(v, id) : (mem.pos[id] = v, null)),
+    getPos: id => tx("pos","readonly", s => s ? s.get(id) : {result: mem.pos[id]}),
+    delPos: id => tx("pos","readwrite", s => s ? s.delete(id) : (delete mem.pos[id], null)),
+    allPos: async () => {
+      const db = await open(); if(!db) return {...mem.pos};
+      return new Promise(res => {
+        const out = {}; try{
+          const c = db.transaction("pos").objectStore("pos").openCursor();
+          c.onsuccess = () => { const cur = c.result; if(cur){ out[cur.key] = cur.value; cur.continue(); } else res(out); };
+          c.onerror = () => res(out);
+        }catch(e){ res(out); }
+      });
+    },
+    setKV: (k, v) => tx("kv","readwrite", s => s ? s.put(v, k) : (mem.kv[k] = v, null)),
+    getKV: k => tx("kv","readonly", s => s ? s.get(k) : {result: mem.kv[k]}),
+  };
+})();
+
+/* =========================================================
+   4. Ayarlar
+   ========================================================= */
+const DEF = {wpm:300, chunk:1, fs:64, theme:"koyu", font:"serif", punct:true, ramp:true, rewind:true, mode:"flow", pfs:20, plh:1.6};
+let S = {...DEF};
+async function loadSettings(){ try{ const v = await store.getKV("settings"); if(v) S = {...DEF, ...v}; }catch(e){} applySettings(); }
+function saveSettings(){ store.setKV("settings", S); }
+function applySettings(){
+  document.body.classList.toggle("sepya", S.theme === "sepya");
+  document.body.classList.toggle("acik", S.theme === "acik");
+  document.documentElement.style.setProperty("--fs", S.fs + "px");
+  $("#word").classList.toggle("sans", S.font === "sans");
+  $("#pageCols").classList.toggle("sans", S.font === "sans");
+  document.documentElement.style.setProperty("--pfs", S.pfs + "px");
+  document.documentElement.style.setProperty("--plh", S.plh);
+  $("#wpmVal").textContent = S.wpm;
+  const tc = {koyu:"#121212", sepya:"#f3ead8", acik:"#fbfbf9"}[S.theme];
+  document.querySelector('meta[name="theme-color"]').content = tc;
+}
+
+/* =========================================================
+   5. Kütüphane ekranı
+   ========================================================= */
+const $ = s => document.querySelector(s);
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function fmtTime(min){
+  min = Math.max(0, Math.round(min));
+  if(min < 60) return min + " dk";
+  return Math.floor(min / 60) + " sa " + (min % 60) + " dk";
+}
+
+async function renderLibrary(){
+  const books = (await store.allBooks()) || [];
+  const pos = await store.allPos();
+  books.sort((a, b) => ((pos[b.id]||{}).t || b.added) - ((pos[a.id]||{}).t || a.added));
+  const box = $("#books");
+  if(!books.length){
+    box.style.display = "block";
+    box.innerHTML = `<div class="empty"><b>Henüz kitap yok.</b><br>“+ EPUB ekle” ile Dosyalar'dan bir ya da birkaç EPUB seç.<br>Mac'teysen dosyayı bu sayfaya sürükleyip bırakabilirsin.</div>`;
+    return;
+  }
+  box.style.display = "";
+  box.innerHTML = books.map(b => {
+    const i = (pos[b.id] || {}).i || 0, total = b.words.length;
+    const pct = Math.round(100 * i / Math.max(1, total - 1));
+    const left = (total - i) / S.wpm;
+    return `<div class="book" data-id="${b.id}">
+      <button class="del" data-del="${b.id}" title="Kaldır">×</button>
+      <div class="t">${esc(b.title)}</div>
+      <div class="a">${esc(b.author)}</div>
+      <div class="meta"><span>%${pct}</span><span>${fmtTime(left)} kaldı</span></div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+    </div>`;
+  }).join("");
+}
+
+$("#books").addEventListener("click", e => {
+  const del = e.target.closest("[data-del]");
+  if(del){
+    e.stopPropagation();
+    const card = del.closest(".book"); const t = card.querySelector(".t").textContent;
+    confirmDialog(`“${t}” kütüphaneden kaldırılsın mı? EPUB dosyan silinmez.`, "Kaldır", async () => {
+      await store.delBook(del.dataset.del); await store.delPos(del.dataset.del); renderLibrary();
+    });
+    return;
+  }
+  const card = e.target.closest(".book"); if(card) openBook(card.dataset.id);
+});
+
+$("#addBtn").onclick = () => $("#fileIn").click();
+$("#fileIn").onchange = e => { addFiles(Array.from(e.target.files)); e.target.value = ""; };
+document.addEventListener("dragover", e => e.preventDefault());
+document.addEventListener("drop", e => { e.preventDefault(); if(!$("#library").classList.contains("hidden")) addFiles(Array.from(e.dataTransfer.files)); });
+
+async function addFiles(files){
+  if(!files.length) return;
+  if(typeof DecompressionStream === "undefined"){ $("#status").textContent = "Bu tarayıcı çok eski (Safari 16.4+ gerekli)."; return; }
+  let ok = 0; const errs = [];
+  for(const f of files){
+    $("#status").textContent = `Açılıyor: ${f.name}…`;
+    try{ const b = await parseEpub(f); await store.putBook(b); ok++; }
+    catch(err){ errs.push(`${f.name}: ${err.message || err}`); }
+  }
+  $("#status").innerHTML = (ok ? `${ok} kitap eklendi. ` : "") + errs.map(esc).join("<br>");
+  if(!(await store.persistent())) $("#status").innerHTML += "<br>Not: tarayıcı kalıcı depolamaya izin vermedi; kitaplar sayfa kapanınca kaybolabilir.";
+  renderLibrary();
+}
+
+/* =========================================================
+   6. Okuyucu (RSVP motoru)
+   ========================================================= */
+let B = null, idx = 0, timer = null, playing = false, rampLeft = 0, lastSave = 0, wakeLock = null;
+
+async function openBook(id){
+  B = await store.getBook(id);
+  if(!B) return;
+  if(!(B.flags instanceof Uint8Array)) B.flags = new Uint8Array(B.flags);
+  const p = await store.getPos(id);
+  idx = Math.min((p && p.i) || 0, B.words.length - 1);
+  $("#library").classList.add("hidden"); $("#reader").classList.remove("hidden");
+  $("#scrub").max = B.words.length - 1;
+  setMode(S.mode);
+}
+function closeBook(){
+  pause(); savePos(true); B = null;
+  $("#reader").classList.add("hidden"); $("#library").classList.remove("hidden");
+  renderLibrary();
+}
+
+function pivotIndex(w){
+  const L = w.length;
+  if(L <= 1) return 0; if(L <= 5) return 1; if(L <= 9) return 2; if(L <= 13) return 3; return 4;
+}
+function chunkAt(i){
+  const n = Math.max(1, S.chunk); const ws = [];
+  for(let k = 0; k < n && i + k < B.words.length; k++){
+    ws.push(B.words[i + k]);
+    if(B.flags[i + k] & 1) break;                      // paragraf sınırını aşma
+    if(/[.!?…:;]["”’»)]*$/.test(B.words[i + k])) break; // cümle sınırını aşma
+  }
+  return ws;
+}
+function show(){
+  if(!B) return;
+  const ws = chunkAt(idx);
+  const el = $("#word");
+  let text = ws.join(" ");
+  // Pivot: tek kelimede ORP; çoklu kelimede en uzun kelimenin ORP'si
+  let pi;
+  if(ws.length === 1){
+    const lead = (text.match(/^[^\p{L}\p{N}]*/u) || [""])[0].length;
+    const core = text.slice(lead).replace(/[^\p{L}\p{N}]+$/u, "");
+    pi = lead + pivotIndex(core || text);
+    if(pi >= text.length) pi = text.length - 1;
+  } else {
+    pi = Math.floor(text.length * 0.35);
+  }
+  const chars = Array.from(text);
+  if(pi >= chars.length) pi = chars.length - 1;
+  el.children[0].textContent = chars.slice(0, pi).join("");
+  el.children[1].textContent = chars[pi] || "";
+  el.children[2].textContent = chars.slice(pi + 1).join("");
+  // Uzun kelimelerde yazıyı küçült ki taşmasın
+  const maxSide = Math.max(pi, chars.length - pi - 1);
+  const avail = (Math.min(window.innerWidth * 0.92, 1100) / 2) / (S.fs * 0.55);
+  el.style.fontSize = maxSide > avail ? Math.max(18, Math.floor(S.fs * avail / maxSide)) + "px" : "";
+  updateProgress();
+}
+function curChapter(){
+  let c = 0;
+  for(let k = 0; k < B.chapters.length; k++){ if(B.chapters[k].start <= idx) c = k; else break; }
+  return c;
+}
+function updateProgress(){
+  const total = B.words.length;
+  $("#scrub").value = idx;
+  const c = curChapter();
+  $("#pChap").textContent = `${c + 1}/${B.chapters.length}`;
+  const pct = Math.round(100 * idx / Math.max(1, total - 1));
+  const chEnd = c + 1 < B.chapters.length ? B.chapters[c + 1].start : total;
+  if(S.mode === "page"){
+    $("#pLeft").textContent = `%${pct}`;
+    $("#pgInfo").textContent = PG.total ? `Sayfa ${PG.page + 1} / ${PG.total}` : "";
+  } else {
+    $("#pLeft").textContent = `%${pct} · bölüm: ${fmtTime((chEnd - idx) / S.wpm)} · kitap: ${fmtTime((total - idx) / S.wpm)}`;
+  }
+  $("#rTitle").textContent = `${B.title} — ${B.chapters[c].title}`;
+}
+function delayFor(i, n){
+  const base = 60000 / S.wpm;
+  let d = base * n * (n > 1 ? 0.9 : 1);
+  const w = B.words[i + n - 1] || "";
+  if(S.punct){
+    if(/[.!?…]["”’»)]*$/.test(w)) d *= 2.2;
+    else if(/[,;:–—]["”’»)]*$/.test(w)) d *= 1.5;
+  }
+  if(B.flags[i + n - 1] & 1) d += base * 1.6;          // paragraf sonu
+  const L = w.length; if(L > 8) d *= 1 + Math.min(0.6, (L - 8) * 0.06);
+  if(rampLeft > 0){ d *= 1 + rampLeft * 0.18; rampLeft--; }
+  return d;
+}
+function tick(){
+  if(!playing) return;
+  const n = chunkAt(idx).length;
+  const d = delayFor(idx, n);
+  timer = setTimeout(() => {
+    if(idx + n >= B.words.length){ show(); pause(); idx = B.words.length - 1; savePos(true); return; }
+    const before = curChapter();
+    idx += n; show();
+    if(curChapter() !== before){ rampLeft = 4; }
+    if(idx - lastSave > 40) savePos();
+    tick();
+  }, d);
+}
+function play(){
+  if(!B || playing) return;
+  if(idx >= B.words.length - 1) idx = 0;
+  if(S.rewind && idx > 0) idx = sentenceStart(idx); // devam ederken cümle başına dön
+  playing = true; rampLeft = S.ramp ? 5 : 0;
+  document.body.classList.add("playing");
+  $("#playBtn").textContent = "❚❚"; $("#hint").classList.add("hidden");
+  show(); requestWake(); tick();
+}
+function pause(){
+  playing = false; clearTimeout(timer);
+  document.body.classList.remove("playing");
+  $("#playBtn").textContent = "▶";
+  releaseWake();
+  if(B){ savePos(true); renderContext(); }
+}
+function toggle(){ playing ? pause() : play(); }
+
+function endsSentence(i){ return (B.flags[i] & 1) || /[.!?…]["”’»)]*$/.test(B.words[i]); }
+function sentenceStart(i){ let k = i - 1; while(k >= 0 && !endsSentence(k)) k--; return k + 1; }
+function prevSentence(){
+  let s = sentenceStart(idx);
+  if(idx - s < 2 && s > 0) s = sentenceStart(s - 1);
+  jump(s);
+}
+function nextSentence(){
+  let k = idx; while(k < B.words.length - 1 && !endsSentence(k)) k++;
+  jump(Math.min(B.words.length - 1, k + 1));
+}
+function jump(i){
+  idx = Math.max(0, Math.min(B.words.length - 1, i));
+  if(S.mode === "page"){ pageGoto(idx); savePos(true); return; }
+  show();
+  if(!playing) renderContext();
+  else { clearTimeout(timer); rampLeft = S.ramp ? 3 : 0; tick(); }
+}
+
+function renderContext(){
+  if(!B || S.mode === "page") return;
+  // Mevcut paragrafı ve öncesini göster; kelimeye dokununca oraya atla
+  let ps = idx - 1; while(ps >= 0 && !(B.flags[ps] & 1)) ps--; ps++;
+  let pe = idx; while(pe < B.words.length - 1 && !(B.flags[pe] & 1)) pe++;
+  let from = ps;
+  if(ps > 0){ let k = ps - 2; while(k >= 0 && !(B.flags[k] & 1)) k--; from = Math.max(k + 1, ps - 120); }
+  const to = Math.min(pe, from + 400);
+  let html = "";
+  for(let k = from; k <= to; k++){
+    html += `<span class="w${k === idx ? " cur" : ""}" data-i="${k}">${esc(B.words[k])}</span>`;
+    html += (B.flags[k] & 1) && k !== to ? "<br><br>" : " ";
+  }
+  const box = $("#context"); box.innerHTML = html;
+  const cur = box.querySelector(".cur"); if(cur) cur.scrollIntoView({block:"center"});
+}
+$("#context").addEventListener("click", e => { const w = e.target.closest(".w"); if(w){ pause(); jump(+w.dataset.i); renderContext(); } });
+
+function savePos(force){
+  if(!B) return; lastSave = idx;
+  store.setPos(B.id, {i: idx, t: Date.now()});
+}
+
+async function requestWake(){ try{ if("wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen"); }catch(e){} }
+function releaseWake(){ try{ wakeLock && wakeLock.release(); }catch(e){} wakeLock = null; }
+document.addEventListener("visibilitychange", () => { if(document.hidden && playing) pause(); else if(document.hidden) savePos(true); });
+
+$("#stage").addEventListener("click", toggle);
+$("#playBtn").onclick = toggle;
+$("#prevBtn").onclick = prevSentence;
+$("#nextBtn").onclick = nextSentence;
+$("#backBtn").onclick = closeBook;
+function setWpm(v){ S.wpm = Math.max(100, Math.min(1000, v)); $("#wpmVal").textContent = S.wpm; saveSettings(); if(B) updateProgress(); }
+$("#slower").onclick = () => setWpm(S.wpm - 25);
+$("#faster").onclick = () => setWpm(S.wpm + 25);
+$("#scrub").addEventListener("input", e => {
+  if(playing) pause(); idx = +e.target.value;
+  if(S.mode === "page") updateProgress(); else show();
+});
+$("#scrub").addEventListener("change", () => { if(S.mode === "page") pageGoto(idx); else renderContext(); savePos(true); });
+
+/* =========================================================
+   6b. Sayfa modu (CSS sütunlarıyla sayfalama)
+   ========================================================= */
+const PG = {chap:-1, page:0, total:0, W:0, G:48, spans:[]};
+
+function setMode(m){
+  if(playing) pause();
+  S.mode = m; saveSettings();
+  const page = m === "page";
+  $("#reader").classList.toggle("page-mode", page);
+  ["#stage", "#context", "#flowCtl"].forEach(s => $(s).classList.toggle("hidden", page));
+  ["#pageView", "#pageCtl"].forEach(s => $(s).classList.toggle("hidden", !page));
+  $("#modeBtn").textContent = page ? "Akış" : "Sayfa";
+  document.body.classList.remove("chromeoff");
+  if(page){ PG.chap = -1; pageGoto(idx, true); }
+  else { show(); renderContext(); }
+}
+$("#modeBtn").onclick = () => setMode(S.mode === "page" ? "flow" : "page");
+
+function layoutPages(c){
+  const vp = $("#pageViewport"), cols = $("#pageCols");
+  const W = Math.min(Math.floor(window.innerWidth * 0.9), 720);
+  vp.style.width = W + "px";
+  PG.W = W; PG.chap = c;
+  cols.style.columnWidth = W + "px";
+  cols.style.columnGap = PG.G + "px";
+  cols.style.transition = "none";
+  cols.style.transform = "translateX(0)";
+  // bölümü paragraf paragraf yaz; her kelime bir span (konumu bulmak için)
+  const s = B.chapters[c].start, e = c + 1 < B.chapters.length ? B.chapters[c + 1].start : B.words.length;
+  let html = `<h3>${esc(B.chapters[c].title)}</h3><p class="first">`;
+  for(let k = s; k < e; k++){
+    html += `<span class="w" data-i="${k}">${esc(B.words[k])}</span>`;
+    if(B.flags[k] & 1){ html += k + 1 < e ? `</p><p>` : `</p>`; }
+    else html += " ";
+  }
+  if(!(B.flags[e - 1] & 1)) html += "</p>";
+  cols.innerHTML = html;
+  PG.spans = Array.from(cols.querySelectorAll(".w"));
+  const step = W + PG.G;
+  PG.total = Math.max(1, Math.round((cols.scrollWidth + PG.G) / step));
+  // Safari bazen scrollWidth'i eksik verir: son kelimenin konumundan da hesapla
+  const last = PG.spans[PG.spans.length - 1];
+  if(last) PG.total = Math.max(PG.total, pageOfSpan(last) + 1);
+  void cols.offsetWidth;
+  cols.style.transition = "";
+}
+function pageOfSpan(span){
+  const base = $("#pageCols").getBoundingClientRect();
+  const r = span.getBoundingClientRect();
+  return Math.max(0, Math.floor((r.left - base.left + 1) / (PG.W + PG.G)));
+}
+function firstWordOnPage(p){
+  // kelimeler sırayla sayfalara dağıldığından ikili arama
+  let lo = 0, hi = PG.spans.length - 1, ans = hi;
+  while(lo <= hi){
+    const mid = (lo + hi) >> 1;
+    if(pageOfSpan(PG.spans[mid]) >= p){ ans = mid; hi = mid - 1; } else lo = mid + 1;
+  }
+  return PG.spans.length ? +PG.spans[ans].dataset.i : idx;
+}
+function showPage(p, keepIdx){
+  PG.page = Math.max(0, Math.min(PG.total - 1, p));
+  $("#pageCols").style.transform = `translateX(${-PG.page * (PG.W + PG.G)}px)`;
+  if(!keepIdx) idx = firstWordOnPage(PG.page);
+  updateProgress();
+}
+function pageGoto(i, mark){
+  const c = (() => { let r = 0; for(let k = 0; k < B.chapters.length; k++){ if(B.chapters[k].start <= i) r = k; else break; } return r; })();
+  if(c !== PG.chap) layoutPages(c);
+  const span = $("#pageCols").querySelector(`[data-i="${i}"]`);
+  $("#pageCols").querySelectorAll(".w.cur").forEach(x => x.classList.remove("cur"));
+  if(span && mark && i > B.chapters[c].start) span.classList.add("cur");
+  idx = i;
+  showPage(span ? pageOfSpan(span) : 0, true);
+}
+function nextPage(){
+  if(PG.page < PG.total - 1){ showPage(PG.page + 1); }
+  else if(PG.chap + 1 < B.chapters.length){ layoutPages(PG.chap + 1); showPage(0); }
+  savePos(true);
+}
+function prevPage(){
+  if(PG.page > 0){ showPage(PG.page - 1); }
+  else if(PG.chap > 0){ layoutPages(PG.chap - 1); showPage(PG.total - 1); }
+  savePos(true);
+}
+$("#pgNext").onclick = nextPage; $("#pgPrev").onclick = prevPage;
+$("#tapR").onclick = nextPage; $("#tapL").onclick = prevPage;
+$("#pageViewport").addEventListener("click", () => document.body.classList.toggle("chromeoff"));
+(() => {
+  let x0 = null, y0 = 0;
+  const pv = $("#pageView");
+  pv.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, {passive:true});
+  pv.addEventListener("touchend", e => {
+    if(x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+    if(Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)){ e.preventDefault(); dx < 0 ? nextPage() : prevPage(); }
+  });
+})();
+function relayoutPage(){ if(B && S.mode === "page"){ const keep = idx; PG.chap = -1; pageGoto(keep); } }
+
+document.addEventListener("keydown", e => {
+  if(!B || !$("#overlay").classList.contains("hidden")) return;
+  if(S.mode === "page"){
+    if(e.key === "ArrowRight" || e.key === " " || e.key === "PageDown"){ e.preventDefault(); nextPage(); }
+    else if(e.key === "ArrowLeft" || e.key === "PageUp"){ e.preventDefault(); prevPage(); }
+    else if(e.key === "Escape") closeBook();
+    return;
+  }
+  if(e.key === " "){ e.preventDefault(); toggle(); }
+  else if(e.key === "ArrowLeft") prevSentence();
+  else if(e.key === "ArrowRight") nextSentence();
+  else if(e.key === "ArrowUp"){ e.preventDefault(); setWpm(S.wpm + 25); }
+  else if(e.key === "ArrowDown"){ e.preventDefault(); setWpm(S.wpm - 25); }
+  else if(e.key === "Escape") closeBook();
+});
+let rsz; window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { if(!B) return; S.mode === "page" ? relayoutPage() : show(); }, 150); });
+
+/* =========================================================
+   7. Paneller: bölümler, ayarlar, onay
+   ========================================================= */
+function openSheet(html, onClick){
+  const ov = $("#overlay");
+  ov.innerHTML = `<div class="sheet">${html}</div>`;
+  ov.classList.remove("hidden");
+  ov.onclick = e => { if(e.target === ov){ closeSheet(); return; } onClick && onClick(e); };
+}
+function closeSheet(){ $("#overlay").classList.add("hidden"); $("#overlay").innerHTML = ""; }
+
+$("#chapBtn").onclick = () => {
+  pause();
+  const c = curChapter();
+  const html = `<h2>Bölümler</h2>` + B.chapters.map((ch, k) => {
+    const end = k + 1 < B.chapters.length ? B.chapters[k + 1].start : B.words.length;
+    return `<button class="chap${k === c ? " cur" : ""}" data-k="${k}">${esc(ch.title)}<span>${fmtTime((end - ch.start) / S.wpm)}</span></button>`;
+  }).join("");
+  openSheet(html, e => { const b = e.target.closest(".chap"); if(b){ closeSheet(); jump(B.chapters[+b.dataset.k].start); renderContext(); savePos(true); } });
+  const cur = $("#overlay .chap.cur"); if(cur) cur.scrollIntoView({block:"center"});
+};
+
+function settingsHtml(){
+  const seg = (key, opts) => `<div class="seg">${opts.map(([v, l]) => `<button data-set="${key}" data-v="${v}" class="${String(S[key]) === String(v) ? "on" : ""}">${l}</button>`).join("")}</div>`;
+  const sw = key => `<button class="switch${S[key] ? " on" : ""}" data-toggle="${key}"></button>`;
+  return `<h2>Görünüm ve akış</h2>
+  <div class="row"><label>Hız<small>Dakikadaki kelime</small></label>
+    <div style="display:flex;align-items:center;gap:10px"><input type="range" min="100" max="1000" step="25" value="${S.wpm}" data-range="wpm" style="width:160px"><b style="min-width:42px">${S.wpm}</b></div></div>
+  <div class="row"><label>Aynı anda<small>Ekranda gösterilen kelime sayısı</small></label>${seg("chunk", [[1,"1"],[2,"2"],[3,"3"]])}</div>
+  <div class="row"><label>Yazı boyutu</label>
+    <div style="display:flex;align-items:center;gap:10px"><input type="range" min="28" max="120" step="2" value="${S.fs}" data-range="fs" style="width:160px"><b style="min-width:42px">${S.fs}</b></div></div>
+  <div class="row"><label>Sayfa modu yazı boyutu</label>
+    <div style="display:flex;align-items:center;gap:10px"><input type="range" min="14" max="36" step="1" value="${S.pfs}" data-range="pfs" style="width:160px"><b style="min-width:42px">${S.pfs}</b></div></div>
+  <div class="row"><label>Sayfa modu satır aralığı</label>${seg("plh", [[1.4,"Sık"],[1.6,"Normal"],[1.9,"Geniş"]])}</div>
+  <div class="row"><label>Yazı tipi</label>${seg("font", [["serif","Tırnaklı"],["sans","Düz"]])}</div>
+  <div class="row"><label>Tema</label>${seg("theme", [["koyu","Koyu"],["sepya","Sepya"],["acik","Açık"]])}</div>
+  <div class="row"><label>Noktalamada dur<small>Cümle ve virgül sonlarında kısa bekleme</small></label>${sw("punct")}</div>
+  <div class="row"><label>Yumuşak başlangıç<small>Başlatınca ilk kelimeler biraz yavaş</small></label>${sw("ramp")}</div>
+  <div class="row"><label>Cümle başından devam<small>Durdurup başlatınca cümlenin başına döner</small></label>${sw("rewind")}</div>
+  <p class="note" style="margin-top:14px">Kısayollar (klavye bağlıysa): boşluk = başlat/durdur, ← → = cümle, ↑ ↓ = hız.</p>`;
+}
+function refreshSettings(){ $("#overlay .sheet").innerHTML = settingsHtml(); bindRanges(); }
+function bindRanges(){
+  document.querySelectorAll("#overlay [data-range]").forEach(r => r.oninput = () => {
+    const k = r.dataset.range; S[k] = +r.value; r.nextElementSibling.textContent = r.value;
+    applySettings(); saveSettings(); if(B){ S.mode === "page" ? relayoutPage() : show(); }
+  });
+}
+$("#setBtn").onclick = () => {
+  pause();
+  openSheet(settingsHtml(), e => {
+    const s = e.target.closest("[data-set]"), t = e.target.closest("[data-toggle]");
+    if(s){ const k = s.dataset.set; S[k] = isNaN(+s.dataset.v) ? s.dataset.v : +s.dataset.v; }
+    else if(t){ S[t.dataset.toggle] = !S[t.dataset.toggle]; }
+    else return;
+    applySettings(); saveSettings(); if(B){ S.mode === "page" ? relayoutPage() : show(); } refreshSettings();
+  });
+  bindRanges();
+};
+
+function confirmDialog(msg, okLabel, onOk){
+  const ov = $("#overlay");
+  ov.innerHTML = `<div class="dialog"><p>${esc(msg)}</p><div class="acts"><button data-a="no">Vazgeç</button><button class="danger" data-a="ok">${esc(okLabel)}</button></div></div>`;
+  ov.style.alignItems = "center"; ov.classList.remove("hidden");
+  ov.onclick = e => {
+    const a = e.target.closest("[data-a]");
+    if(e.target === ov || a){ ov.classList.add("hidden"); ov.style.alignItems = ""; ov.innerHTML = ""; if(a && a.dataset.a === "ok") onOk(); }
+  };
+}
+
+/* ========================================================= */
+(async () => { await loadSettings(); renderLibrary(); })();
+</script>
+</body>
+</html>
