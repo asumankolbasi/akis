@@ -94,7 +94,8 @@
   /* ---------- Paneller ---------- */
   .sheet-bg{position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:flex-end; justify-content:center; z-index:20}
   .sheet{background:var(--card); color:var(--fg); width:min(640px,100%); max-height:82vh; overflow:auto; border-radius:20px 20px 0 0; padding:18px 20px 28px}
-  .sheet h2{margin:0 0 14px; font-size:18px; font-family:var(--serif)}
+  .sheet h2{margin:0 0 4px; font-size:18px; font-family:var(--serif)}
+  .sheet h3{margin:22px 0 0; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
   .sheet .row{display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 0; border-bottom:1px solid var(--line)}
   .sheet .row label{font-size:15px}
   .sheet .row small{display:block; color:var(--muted); font-size:12px; margin-top:2px}
@@ -112,10 +113,10 @@
   .dialog .acts{display:flex; gap:10px; justify-content:center}
   .danger{background:var(--accent); color:#fff}
 
-  /* ---------- Sayfa modu ---------- */
+  /* ---------- Klasik mod (sayfa sayfa) ---------- */
   #pageView{flex:1; display:flex; min-height:0; padding:6px 0 4px; position:relative}
   #pageViewport{overflow:hidden; margin:0 auto; height:100%; position:relative}
-  #pageCols{height:100%; column-fill:auto; font-family:var(--serif); font-size:var(--pfs,20px); line-height:var(--plh,1.6); hyphens:auto; -webkit-hyphens:auto; text-align:left}
+  #pageCols{height:100%; column-fill:auto; font-family:var(--serif); font-size:var(--pfs,20px); line-height:var(--plh,1.6); hyphens:auto; -webkit-hyphens:auto; text-align:justify}
   #pageCols.sans{font-family:var(--sans)}
   #pageCols p{margin:0 0 .2em; text-indent:1.4em}
   #pageCols p.first{text-indent:0}
@@ -147,7 +148,7 @@
   <div class="topbar">
     <button class="ghost" id="backBtn">‹ Kitaplar</button>
     <div class="title" id="rTitle"></div>
-    <button class="modebtn" id="modeBtn">Sayfa</button>
+    <button class="modebtn" id="modeBtn">Klasik</button>
     <button class="ghost" id="chapBtn">Bölümler</button>
     <button class="ghost" id="setBtn">Aa</button>
   </div>
@@ -748,7 +749,7 @@ $("#scrub").addEventListener("input", e => {
 $("#scrub").addEventListener("change", () => { if(S.mode === "page") pageGoto(idx); else renderContext(); savePos(true); });
 
 /* =========================================================
-   6b. Sayfa modu (CSS sütunlarıyla sayfalama)
+   6b. Klasik mod (CSS sütunlarıyla sayfalama)
    ========================================================= */
 const PG = {chap:-1, page:0, total:0, W:0, G:48, spans:[]};
 
@@ -759,7 +760,7 @@ function setMode(m){
   $("#reader").classList.toggle("page-mode", page);
   ["#stage", "#context", "#flowCtl"].forEach(s => $(s).classList.toggle("hidden", page));
   ["#pageView", "#pageCtl"].forEach(s => $(s).classList.toggle("hidden", !page));
-  $("#modeBtn").textContent = page ? "Akış" : "Sayfa";
+  $("#modeBtn").textContent = page ? "Akış" : "Klasik";
   document.body.classList.remove("chromeoff");
   if(page){ PG.chap = -1; pageGoto(idx, true); }
   else { show(); renderContext(); }
@@ -893,21 +894,23 @@ $("#chapBtn").onclick = () => {
 function settingsHtml(){
   const seg = (key, opts) => `<div class="seg">${opts.map(([v, l]) => `<button data-set="${key}" data-v="${v}" class="${String(S[key]) === String(v) ? "on" : ""}">${l}</button>`).join("")}</div>`;
   const sw = key => `<button class="switch${S[key] ? " on" : ""}" data-toggle="${key}"></button>`;
-  return `<h2>Görünüm ve akış</h2>
-  <div class="row"><label>Hız<small>Dakikadaki kelime</small></label>
-    <div style="display:flex;align-items:center;gap:10px"><input type="range" min="100" max="1000" step="25" value="${S.wpm}" data-range="wpm" style="width:160px"><b style="min-width:42px">${S.wpm}</b></div></div>
-  <div class="row"><label>Aynı anda<small>Ekranda gösterilen kelime sayısı</small></label>${seg("chunk", [[1,"1"],[2,"2"],[3,"3"]])}</div>
-  <div class="row"><label>Yazı boyutu</label>
-    <div style="display:flex;align-items:center;gap:10px"><input type="range" min="28" max="120" step="2" value="${S.fs}" data-range="fs" style="width:160px"><b style="min-width:42px">${S.fs}</b></div></div>
-  <div class="row"><label>Sayfa modu yazı boyutu</label>
-    <div style="display:flex;align-items:center;gap:10px"><input type="range" min="14" max="36" step="1" value="${S.pfs}" data-range="pfs" style="width:160px"><b style="min-width:42px">${S.pfs}</b></div></div>
-  <div class="row"><label>Sayfa modu satır aralığı</label>${seg("plh", [[1.4,"Sık"],[1.6,"Normal"],[1.9,"Geniş"]])}</div>
-  <div class="row"><label>Yazı tipi</label>${seg("font", [["serif","Tırnaklı"],["sans","Düz"]])}</div>
+  const range = (key, min, max, step) => `<div style="display:flex;align-items:center;gap:10px"><input type="range" min="${min}" max="${max}" step="${step}" value="${S[key]}" data-range="${key}" style="width:160px"><b style="min-width:42px">${S[key]}</b></div>`;
+  return `<h2>Ayarlar</h2>
+  <h3>Genel</h3>
   <div class="row"><label>Tema</label>${seg("theme", [["koyu","Koyu"],["sepya","Sepya"],["acik","Açık"]])}</div>
+  <div class="row"><label>Yazı tipi</label>${seg("font", [["serif","Tırnaklı"],["sans","Düz"]])}</div>
+  <h3>Akış</h3>
+  <div class="row"><label>Hız<small>Dakikadaki kelime</small></label>${range("wpm", 100, 1000, 25)}</div>
+  <div class="row"><label>Aynı anda<small>Ekranda gösterilen kelime sayısı</small></label>${seg("chunk", [[1,"1"],[2,"2"],[3,"3"]])}</div>
+  <div class="row"><label>Yazı boyutu</label>${range("fs", 28, 120, 2)}</div>
   <div class="row"><label>Noktalamada dur<small>Cümle ve virgül sonlarında kısa bekleme</small></label>${sw("punct")}</div>
   <div class="row"><label>Yumuşak başlangıç<small>Başlatınca ilk kelimeler biraz yavaş</small></label>${sw("ramp")}</div>
   <div class="row"><label>Cümle başından devam<small>Durdurup başlatınca cümlenin başına döner</small></label>${sw("rewind")}</div>
-  <p class="note" style="margin-top:14px">Kısayollar (klavye bağlıysa): boşluk = başlat/durdur, ← → = cümle, ↑ ↓ = hız.</p>`;
+  <p class="note" style="margin-top:10px">Kısayollar: boşluk = başlat/durdur, ← → = cümle, ↑ ↓ = hız.</p>
+  <h3>Klasik</h3>
+  <div class="row"><label>Yazı boyutu</label>${range("pfs", 14, 36, 1)}</div>
+  <div class="row"><label>Satır aralığı</label>${seg("plh", [[1.4,"Sık"],[1.6,"Normal"],[1.9,"Geniş"]])}</div>
+  <p class="note" style="margin-top:10px">Kısayollar: ← → ya da boşluk = sayfa çevir.</p>`;
 }
 function refreshSettings(){ $("#overlay .sheet").innerHTML = settingsHtml(); bindRanges(); }
 function bindRanges(){

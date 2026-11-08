@@ -11,9 +11,9 @@ Akış, tarayıcıda çalışan bir EPUB okuyucudur. Kelimeleri ekranın ortası
 Akış iki okuma modu sunar.
 
 - **Akış modu:** Kelimeler ekranın ortasında sırayla belirir. Her kelimenin bir harfi kırmızıdır. Gözün o harfe odaklanır, böylece gözünü kaydırmadan okursun.
-- **Sayfa modu:** Kitap normal bir kitap gibi sayfalara bölünür. Sayfayı kenarlara dokunarak ya da kaydırarak çevirirsin.
+- **Klasik mod:** Kitap normal bir kitap gibi sayfalara bölünür. Sayfayı kenarlara dokunarak ya da kaydırarak çevirirsin.
 
-İki mod aynı yeri hatırlar. Akış modunda bıraktığın yerden sayfa modunda devam edebilirsin.
+İki mod aynı yeri hatırlar. Akış modunda bıraktığın yerden klasik modda devam edebilirsin.
 
 ## Özellikler
 
