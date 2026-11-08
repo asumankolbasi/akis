@@ -33,14 +33,19 @@
   .libhead h1{font-family:var(--serif); font-weight:600; font-size:34px; margin:0; letter-spacing:.2px}
   .libhead h1 span{color:var(--accent)}
   .addbtn{background:var(--accent); color:#fff; font-weight:600; padding:12px 18px}
-  #books{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px}
-  .book{background:var(--card); border-radius:16px; padding:16px 16px 14px; cursor:pointer; position:relative; display:flex; flex-direction:column; gap:6px; min-height:132px}
-  .book .t{font-family:var(--serif); font-size:19px; line-height:1.25; font-weight:600; padding-right:28px}
-  .book .a{color:var(--muted); font-size:14px}
-  .book .meta{margin-top:auto; font-size:13px; color:var(--muted); display:flex; justify-content:space-between}
-  .book .bar{height:4px; background:var(--line); border-radius:3px; overflow:hidden}
+  #books{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:28px 20px}
+  .book{cursor:pointer; position:relative; display:flex; flex-direction:column; gap:4px; min-width:0}
+  .book .cover{aspect-ratio:2/3; border-radius:6px; overflow:hidden; background:var(--card); box-shadow:0 1px 2px rgba(0,0,0,.25),0 6px 18px rgba(0,0,0,.18); margin-bottom:8px; position:relative}
+  .book .cover img{width:100%; height:100%; object-fit:cover; display:block}
+  .book .cover.ph{display:flex; flex-direction:column; justify-content:space-between; padding:16px 14px; background:linear-gradient(160deg,hsl(var(--h),28%,30%),hsl(var(--h),32%,18%)); color:#f3efe6}
+  .book .cover.ph b{font-family:var(--serif); font-size:17px; line-height:1.25; font-weight:600; display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden}
+  .book .cover.ph small{font-size:12px; opacity:.75}
+  .book .t{font-family:var(--serif); font-size:15px; line-height:1.3; font-weight:600; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+  .book .a{color:var(--muted); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .book .meta{font-size:12px; color:var(--muted); display:flex; justify-content:space-between; gap:6px; margin-top:4px}
+  .book .bar{height:3px; background:var(--line); border-radius:2px; overflow:hidden}
   .book .bar i{display:block; height:100%; background:var(--accent)}
-  .book .del{position:absolute; top:8px; right:6px; padding:6px 10px; background:transparent; color:var(--muted); font-size:18px}
+  .book .del{position:absolute; top:6px; right:6px; z-index:1; width:28px; height:28px; padding:0; border-radius:50%; background:rgba(0,0,0,.45); color:#fff; font-size:16px; line-height:28px}
   .empty{color:var(--muted); text-align:center; padding:60px 20px; border:2px dashed var(--line); border-radius:18px; line-height:1.6}
   .empty b{color:var(--fg)}
   #status{margin:14px 0; color:var(--muted); font-size:14px; min-height:20px}
@@ -50,7 +55,8 @@
   #reader{position:fixed; inset:0; display:flex; flex-direction:column}
   .topbar{display:flex; align-items:center; gap:8px; padding:12px 14px; transition:opacity .4s}
   .topbar .title{flex:1; min-width:0; text-align:center; font-size:14px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .playing .topbar, .playing .bottom, .playing #context{opacity:.08}
+  .playing .topbar, .playing .bottom{opacity:.08}
+  .playing #context{opacity:0; pointer-events:none}
   .playing .topbar:hover, .playing .bottom:hover{opacity:1}
 
   #stage{flex:1; display:flex; flex-direction:column; justify-content:center; align-items:stretch; position:relative; user-select:none; -webkit-user-select:none; cursor:pointer; min-height:0}
@@ -65,14 +71,18 @@
   #word.sans{font-family:var(--sans)}
   #hint{position:absolute; bottom:18px; left:0; right:0; text-align:center; color:var(--muted); font-size:13px}
 
-  #context{max-height:32vh; overflow:auto; margin:0 auto; width:min(92vw,760px); padding:4px 4px 10px; font-family:var(--serif); font-size:18px; line-height:1.6; color:var(--muted); transition:opacity .4s}
+  #context{height:32vh; flex:none; overflow:auto; margin:0 auto; width:min(92vw,760px); padding:4px 4px 10px; font-family:var(--serif); font-size:18px; line-height:1.6; color:var(--muted); transition:opacity .4s}
   #context .w{cursor:pointer; border-radius:4px}
   #context .w.cur{background:var(--hl); color:var(--fg)}
 
   .bottom{padding:8px 16px 16px; transition:opacity .4s; padding-bottom:max(16px, env(safe-area-inset-bottom))}
   .progress{display:flex; align-items:center; gap:10px; font-size:13px; color:var(--muted); margin-bottom:10px}
   .progress input{flex:1}
-  input[type=range]{accent-color:var(--accent); height:28px}
+  input[type=range]{-webkit-appearance:none; appearance:none; background:transparent; height:28px; margin:0; cursor:pointer; --p:0%}
+  input[type=range]::-webkit-slider-runnable-track{height:4px; border-radius:2px; background:linear-gradient(to right,var(--accent) var(--p),var(--line) var(--p))}
+  input[type=range]::-moz-range-track{height:4px; border-radius:2px; background:linear-gradient(to right,var(--accent) var(--p),var(--line) var(--p))}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:16px; height:16px; margin-top:-6px; border-radius:50%; background:var(--fg); border:0}
+  input[type=range]::-moz-range-thumb{width:16px; height:16px; border-radius:50%; background:var(--fg); border:0}
   .controls{display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap}
   .controls .big{width:72px; height:72px; border-radius:50%; font-size:28px; background:var(--accent); color:#fff; display:grid; place-items:center; padding:0}
   .controls .nav{width:56px; height:56px; border-radius:50%; font-size:20px; display:grid; place-items:center; padding:0}
@@ -105,11 +115,11 @@
   /* ---------- Sayfa modu ---------- */
   #pageView{flex:1; display:flex; min-height:0; padding:6px 0 4px; position:relative}
   #pageViewport{overflow:hidden; margin:0 auto; height:100%; position:relative}
-  #pageCols{height:100%; column-fill:auto; font-family:var(--serif); font-size:var(--pfs,20px); line-height:var(--plh,1.6); hyphens:auto; -webkit-hyphens:auto; text-align:justify; transition:transform .22s ease; will-change:transform}
+  #pageCols{height:100%; column-fill:auto; font-family:var(--serif); font-size:var(--pfs,20px); line-height:var(--plh,1.6); hyphens:auto; -webkit-hyphens:auto; text-align:left}
   #pageCols.sans{font-family:var(--sans)}
   #pageCols p{margin:0 0 .2em; text-indent:1.4em}
   #pageCols p.first{text-indent:0}
-  #pageCols h3{font-size:1.25em; text-align:center; margin:.6em 0 1.2em; font-weight:600; text-indent:0; break-after:avoid}
+  #pageCols h3{font-size:1.25em; text-align:center; margin:.6em 0 1.2em; font-weight:600; text-indent:0; break-after:avoid; hyphens:none; -webkit-hyphens:none}
   #pageCols .w.cur{background:var(--hl); border-radius:3px}
   .tapzone{position:absolute; top:0; bottom:0; width:30%; z-index:2}
   .tapzone.l{left:0} .tapzone.r{right:0}
@@ -291,11 +301,12 @@ async function parseEpub(file){
 
   const title = (byLocal(opf, "title")[0] || {}).textContent || file.name.replace(/\.epub$/i, "");
   const author = (byLocal(opf, "creator")[0] || {}).textContent || "";
+  const lang = ((byLocal(opf, "language")[0] || {}).textContent || "").trim();
   const manifest = {};
   let navHref = null, ncxHref = null;
   for(const it of byLocal(opf, "item")){
     const id = it.getAttribute("id"), href = it.getAttribute("href"), mt = it.getAttribute("media-type") || "";
-    manifest[id] = {href: resolvePath(opfPath, href), mt};
+    manifest[id] = {id, href: resolvePath(opfPath, href), mt, props: it.getAttribute("properties") || ""};
     if((it.getAttribute("properties") || "").split(/\s+/).includes("nav")) navHref = resolvePath(opfPath, href);
     if(mt === "application/x-dtbncx+xml") ncxHref = resolvePath(opfPath, href);
   }
@@ -348,11 +359,43 @@ async function parseEpub(file){
     chapters.push({title: t, start});
   }
   if(!words.length) throw new Error("Kitapta okunabilir metin bulunamadı.");
+  let cover = null;
+  try{ cover = await findCover(zip, opf, opfPath, manifest, spine); }catch(e){ /* kapak isteğe bağlı */ }
   return {
     id: "b" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-    title: title.trim(), author: author.trim(), words, flags: new Uint8Array(flags), chapters,
+    title: title.trim(), author: author.trim(), lang, words, flags: new Uint8Array(flags), chapters, cover,
     added: Date.now()
   };
+}
+
+/* Kapak: EPUB3 cover-image → EPUB2 <meta name="cover"> → adında "cover" geçen görsel → ilk sayfadaki görsel */
+async function findCover(zip, opf, opfPath, manifest, spine){
+  const items = Object.values(manifest), isImg = it => it && /^image\//i.test(it.mt);
+  let it = items.find(x => x.props.split(/\s+/).includes("cover-image"));
+  if(!isImg(it)){ const m = byLocal(opf, "meta").find(x => x.getAttribute("name") === "cover"); it = m && manifest[m.getAttribute("content")]; }
+  if(!isImg(it)) it = items.find(x => isImg(x) && /cover/i.test(x.id + " " + x.href));
+  let href = isImg(it) ? it.href : null, mt = isImg(it) ? it.mt : "";
+  if(!href && spine[0]){
+    const doc = parseXml(await zip.text(spine[0].href) || "", "application/xhtml+xml");
+    const im = byLocal(doc, "img")[0] || byLocal(doc, "image")[0];
+    const src = im && (im.getAttribute("src") || im.getAttribute("xlink:href") || im.getAttributeNS("http://www.w3.org/1999/xlink", "href"));
+    if(src){ href = resolvePath(spine[0].href, src); mt = (items.find(x => x.href === href) || {}).mt || ""; }
+  }
+  if(!href) return null;
+  const bytes = await zip.get(href); if(!bytes) return null;
+  const blob = await shrinkImage(new Blob([bytes], {type: mt || "image/jpeg"}), 400);
+  // Blob yerine ham bayt sakla: WebKit IndexedDB'ye Blob yazarken sorun çıkarabiliyor
+  return {type: blob.type || "image/jpeg", data: await blob.arrayBuffer()};
+}
+async function shrinkImage(blob, maxW){
+  try{
+    const bmp = await createImageBitmap(blob);
+    const w = Math.min(maxW, bmp.width), h = Math.round(bmp.height * w / bmp.width);
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    cv.getContext("2d").drawImage(bmp, 0, 0, w, h);
+    const out = await new Promise(r => cv.toBlob(r, "image/jpeg", 0.85));
+    return out || blob;
+  }catch(e){ return blob; }
 }
 
 /* =========================================================
@@ -454,19 +497,30 @@ async function renderLibrary(){
     return;
   }
   box.style.display = "";
+  coverUrls.forEach(u => URL.revokeObjectURL(u)); coverUrls = [];
   box.innerHTML = books.map(b => {
     const i = (pos[b.id] || {}).i || 0, total = b.words.length;
     const pct = Math.round(100 * i / Math.max(1, total - 1));
     const left = (total - i) / S.wpm;
+    let cover;
+    if(b.cover && b.cover.data){
+      const u = URL.createObjectURL(new Blob([b.cover.data], {type: b.cover.type})); coverUrls.push(u);
+      cover = `<div class="cover"><img src="${u}" alt=""></div>`;
+    } else {
+      let h = 0; for(const ch of b.title) h = (h * 31 + ch.codePointAt(0)) % 360;
+      cover = `<div class="cover ph" style="--h:${h}"><b>${esc(b.title)}</b><small>${esc(b.author)}</small></div>`;
+    }
     return `<div class="book" data-id="${b.id}">
       <button class="del" data-del="${b.id}" title="Kaldır">×</button>
+      ${cover}
       <div class="t">${esc(b.title)}</div>
       <div class="a">${esc(b.author)}</div>
-      <div class="meta"><span>%${pct}</span><span>${fmtTime(left)} kaldı</span></div>
       <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="meta"><span>%${pct}</span><span>${fmtTime(left)} kaldı</span></div>
     </div>`;
   }).join("");
 }
+let coverUrls = [];
 
 $("#books").addEventListener("click", e => {
   const del = e.target.closest("[data-del]");
@@ -490,13 +544,21 @@ async function addFiles(files){
   if(!files.length) return;
   if(typeof DecompressionStream === "undefined"){ $("#status").textContent = "Bu tarayıcı çok eski (Safari 16.4+ gerekli)."; return; }
   let ok = 0; const errs = [];
+  const existing = (await store.allBooks()) || [];
   for(const f of files){
     $("#status").textContent = `Açılıyor: ${f.name}…`;
-    try{ const b = await parseEpub(f); await store.putBook(b); ok++; }
+    try{
+      const b = await parseEpub(f);
+      const same = existing.find(x => x.title === b.title && x.author === b.author && x.words.length === b.words.length);
+      if(same){ b.id = same.id; b.added = same.added; }  // yeniden eklenen kitap: kaldığın yer korunur
+      await store.putBook(b); ok++;
+    }
     catch(err){ errs.push(`${f.name}: ${err.message || err}`); }
   }
   $("#status").innerHTML = (ok ? `${ok} kitap eklendi. ` : "") + errs.map(esc).join("<br>");
+  clearTimeout(addFiles.t);
   if(!(await store.persistent())) $("#status").innerHTML += "<br>Not: tarayıcı kalıcı depolamaya izin vermedi; kitaplar sayfa kapanınca kaybolabilir.";
+  else if(!errs.length) addFiles.t = setTimeout(() => { $("#status").textContent = ""; }, 3000);
   renderLibrary();
 }
 
@@ -565,9 +627,11 @@ function curChapter(){
   for(let k = 0; k < B.chapters.length; k++){ if(B.chapters[k].start <= idx) c = k; else break; }
   return c;
 }
+function fillRange(r){ const lo = +r.min || 0, hi = +r.max || 100; r.style.setProperty("--p", (100 * (r.value - lo) / Math.max(1, hi - lo)) + "%"); }
+document.addEventListener("input", e => { if(e.target.type === "range") fillRange(e.target); });
 function updateProgress(){
   const total = B.words.length;
-  $("#scrub").value = idx;
+  $("#scrub").value = idx; fillRange($("#scrub"));
   const c = curChapter();
   $("#pChap").textContent = `${c + 1}/${B.chapters.length}`;
   const pct = Math.round(100 * idx / Math.max(1, total - 1));
@@ -710,13 +774,18 @@ function layoutPages(c){
   PG.W = W; PG.chap = c;
   cols.style.columnWidth = W + "px";
   cols.style.columnGap = PG.G + "px";
-  cols.style.transition = "none";
   cols.style.transform = "translateX(0)";
+  if(B.lang) cols.lang = B.lang; else cols.removeAttribute("lang");
   // bölümü paragraf paragraf yaz; her kelime bir span (konumu bulmak için)
   const s = B.chapters[c].start, e = c + 1 < B.chapters.length ? B.chapters[c + 1].start : B.words.length;
-  let html = `<h3>${esc(B.chapters[c].title)}</h3><p class="first">`;
+  // Kitabın ilk paragrafı zaten bölüm başlığıysa onu başlık olarak çiz, ayrıca ekleme
+  let fe = s; while(fe < e - 1 && !(B.flags[fe] & 1)) fe++;
+  const norm = t => t.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+  const headIsText = fe - s < 25 && norm(B.words.slice(s, fe + 1).join(" ")) === norm(B.chapters[c].title);
+  let html = headIsText ? `<h3>` : `<h3>${esc(B.chapters[c].title)}</h3><p class="first">`;
   for(let k = s; k < e; k++){
     html += `<span class="w" data-i="${k}">${esc(B.words[k])}</span>`;
+    if(headIsText && k === fe){ html += k + 1 < e ? `</h3><p class="first">` : `</h3>`; continue; }
     if(B.flags[k] & 1){ html += k + 1 < e ? `</p><p>` : `</p>`; }
     else html += " ";
   }
@@ -728,8 +797,6 @@ function layoutPages(c){
   // Safari bazen scrollWidth'i eksik verir: son kelimenin konumundan da hesapla
   const last = PG.spans[PG.spans.length - 1];
   if(last) PG.total = Math.max(PG.total, pageOfSpan(last) + 1);
-  void cols.offsetWidth;
-  cols.style.transition = "";
 }
 function pageOfSpan(span){
   const base = $("#pageCols").getBoundingClientRect();
@@ -845,6 +912,7 @@ function settingsHtml(){
 }
 function refreshSettings(){ $("#overlay .sheet").innerHTML = settingsHtml(); bindRanges(); }
 function bindRanges(){
+  document.querySelectorAll("#overlay input[type=range]").forEach(fillRange);
   document.querySelectorAll("#overlay [data-range]").forEach(r => r.oninput = () => {
     const k = r.dataset.range; S[k] = +r.value; r.nextElementSibling.textContent = r.value;
     applySettings(); saveSettings(); if(B){ S.mode === "page" ? relayoutPage() : show(); }
