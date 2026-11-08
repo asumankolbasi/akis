@@ -127,6 +127,7 @@
   .pagectl{display:flex; align-items:center; justify-content:center; gap:14px}
   .pagectl b{font-weight:500; font-size:14px; color:var(--muted); min-width:120px; text-align:center; font-variant-numeric:tabular-nums}
   .modebtn{font-weight:600}
+  #fsBtn{display:grid; place-items:center; padding:9px 10px}
   body.chromeoff .page-mode .topbar, body.chromeoff .page-mode .bottom{opacity:0; pointer-events:none}
 </style>
 </head>
@@ -150,6 +151,7 @@
     <div class="title" id="rTitle"></div>
     <button class="modebtn" id="modeBtn">Klasik</button>
     <button class="ghost" id="chapBtn">Bölümler</button>
+    <button class="ghost hidden" id="fsBtn" title="Tam ekran (F)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="ghost" id="setBtn">Aa</button>
   </div>
 
@@ -852,8 +854,32 @@ $("#pageViewport").addEventListener("click", () => document.body.classList.toggl
 })();
 function relayoutPage(){ if(B && S.mode === "page"){ const keep = idx; PG.chap = -1; pageGoto(keep); } }
 
+/* Tam ekran (tarayıcı destekliyorsa) */
+const FS = {
+  el: () => document.fullscreenElement || document.webkitFullscreenElement,
+  can: () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled),
+  toggle(){
+    const d = document.documentElement;
+    try{
+      if(FS.el()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else { const r = (d.requestFullscreen || d.webkitRequestFullscreen).call(d); if(r && r.catch) r.catch(() => {}); }
+    }catch(e){}
+  },
+  sync(){
+    $("#fsBtn").innerHTML = FS.el()
+      ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>'
+      : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+    $("#fsBtn").title = FS.el() ? "Tam ekrandan çık (F)" : "Tam ekran (F)";
+  }
+};
+$("#fsBtn").classList.toggle("hidden", !FS.can());
+$("#fsBtn").onclick = FS.toggle;
+document.addEventListener("fullscreenchange", FS.sync);
+document.addEventListener("webkitfullscreenchange", FS.sync);
+
 document.addEventListener("keydown", e => {
   if(!B || !$("#overlay").classList.contains("hidden")) return;
+  if((e.key === "f" || e.key === "F") && !e.metaKey && !e.ctrlKey && FS.can()){ e.preventDefault(); FS.toggle(); return; }
   if(S.mode === "page"){
     if(e.key === "ArrowRight" || e.key === " " || e.key === "PageDown"){ e.preventDefault(); nextPage(); }
     else if(e.key === "ArrowLeft" || e.key === "PageUp"){ e.preventDefault(); prevPage(); }
@@ -906,11 +932,11 @@ function settingsHtml(){
   <div class="row"><label>Noktalamada dur<small>Cümle ve virgül sonlarında kısa bekleme</small></label>${sw("punct")}</div>
   <div class="row"><label>Yumuşak başlangıç<small>Başlatınca ilk kelimeler biraz yavaş</small></label>${sw("ramp")}</div>
   <div class="row"><label>Cümle başından devam<small>Durdurup başlatınca cümlenin başına döner</small></label>${sw("rewind")}</div>
-  <p class="note" style="margin-top:10px">Kısayollar: boşluk = başlat/durdur, ← → = cümle, ↑ ↓ = hız.</p>
+  <p class="note" style="margin-top:10px">Kısayollar: boşluk = başlat/durdur, ← → = cümle, ↑ ↓ = hız, F = tam ekran.</p>
   <h3>Klasik</h3>
   <div class="row"><label>Yazı boyutu</label>${range("pfs", 14, 36, 1)}</div>
   <div class="row"><label>Satır aralığı</label>${seg("plh", [[1.4,"Sık"],[1.6,"Normal"],[1.9,"Geniş"]])}</div>
-  <p class="note" style="margin-top:10px">Kısayollar: ← → ya da boşluk = sayfa çevir.</p>`;
+  <p class="note" style="margin-top:10px">Kısayollar: ← → ya da boşluk = sayfa çevir, F = tam ekran.</p>`;
 }
 function refreshSettings(){ $("#overlay .sheet").innerHTML = settingsHtml(); bindRanges(); }
 function bindRanges(){

@@ -21,11 +21,12 @@ Akış iki okuma modu sunar.
 - Cümle sonlarında ve virgüllerde kısa duraklar olur.
 - Durdurduğunda o anki paragraf altta görünür. Bir kelimeye dokunursan okuma oradan devam eder.
 - Koyu, sepya ve açık tema vardır.
+- Okurken tam ekrana geçebilirsin. Böylece tarayıcının üst çubuğu gizlenir.
 - Tırnaklı ya da tırnaksız yazı tipi seçebilirsin.
 - Bölümler listesinden istediğin bölüme atlayabilirsin.
 - Kütüphanede kitaplar kapaklarıyla görünür. Kapağı olmayan kitaba renkli bir kapak çizilir.
 - Kütüphanede her kitabın ilerlemesi ve kalan süresi görünür.
-- Klavye kısayolları vardır: boşluk başlatır ya da durdurur, sol ve sağ ok cümle atlar, yukarı ve aşağı ok hızı değiştirir.
+- Klavye kısayolları vardır: boşluk başlatır ya da durdurur, sol ve sağ ok cümle atlar, yukarı ve aşağı ok hızı değiştirir, F tam ekrana geçer.
 - İnternet olmadan da açılır. Ana ekrana ya da masaüstüne uygulama olarak eklenebilir.
 
 ## Kullanım
