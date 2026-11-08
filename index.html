@@ -126,9 +126,32 @@
   .tapzone.l{left:0} .tapzone.r{right:0}
   .pagectl{display:flex; align-items:center; justify-content:center; gap:14px}
   .pagectl b{font-weight:500; font-size:14px; color:var(--muted); min-width:120px; text-align:center; font-variant-numeric:tabular-nums}
-  .modebtn{font-weight:600}
+  .modes{background:var(--btn)}
+  .narrow{display:none}
+  @media (max-width:640px){
+    .topbar{gap:4px; padding:10px 8px}
+    .topbar .title, .wide{display:none}
+    .narrow{display:inline}
+    .topbar > button{padding:8px 9px}
+    .modes button{padding:7px 9px}
+    .topbar .modes{margin-right:auto}
+    #backBtn{margin-right:auto}
+  }
+  .modes button{padding:7px 12px; color:var(--muted)}
+  .modes button.on{background:var(--bg); color:var(--fg); font-weight:600}
+
+  /* ---------- Cümle modu ---------- */
+  #sentView{flex:1; display:flex; min-height:0; position:relative}
+  #sentBox{margin:auto; width:min(88vw,760px); max-height:100%; overflow:auto; padding:24px 0}
+  #sentText{font-family:var(--serif); font-size:var(--sfs,30px); line-height:1.45; margin:0}
+  #sentTr{font-family:var(--serif); font-size:calc(var(--sfs,30px) * .72); line-height:1.5; color:var(--muted); margin:1.1em 0 0; padding-top:1em; border-top:1px solid var(--line)}
+  #sentTr.err{font-family:var(--sans); font-size:15px; cursor:pointer}
+  #sentBox.sans #sentText, #sentBox.sans #sentTr{font-family:var(--sans)}
+  .trbtn{border-radius:14px; padding:10px 16px; font-weight:600}
+  .trbtn.on{background:var(--accent); color:#fff}
+  .sheet input[type=password], .sheet input[type=text]{font:inherit; font-size:14px; color:var(--fg); background:var(--btn); border:1px solid var(--line); border-radius:10px; padding:9px 12px; width:240px}
   #fsBtn{display:grid; place-items:center; padding:9px 10px}
-  body.chromeoff .page-mode .topbar, body.chromeoff .page-mode .bottom{opacity:0; pointer-events:none}
+  body.chromeoff .page-mode .topbar, body.chromeoff .page-mode .bottom, body.chromeoff .sent-mode .topbar, body.chromeoff .sent-mode .bottom{opacity:0; pointer-events:none}
 </style>
 </head>
 <body>
@@ -147,10 +170,10 @@
 <!-- ====== Okuyucu ====== -->
 <section id="reader" class="hidden">
   <div class="topbar">
-    <button class="ghost" id="backBtn">‹ Kitaplar</button>
+    <button class="ghost" id="backBtn" title="Kitaplar">‹<span class="wide"> Kitaplar</span></button>
     <div class="title" id="rTitle"></div>
-    <button class="modebtn" id="modeBtn">Klasik</button>
-    <button class="ghost" id="chapBtn">Bölümler</button>
+    <div class="seg modes" id="modeSeg"><button data-mode="flow">Akış</button><button data-mode="page">Klasik</button><button data-mode="sent">Cümle</button></div>
+    <button class="ghost" id="chapBtn" title="Bölümler"><span class="wide">Bölümler</span><span class="narrow">☰</span></button>
     <button class="ghost hidden" id="fsBtn" title="Tam ekran (F)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="ghost" id="setBtn">Aa</button>
   </div>
@@ -170,6 +193,12 @@
     <div class="tapzone r" id="tapR"></div>
   </div>
 
+  <div id="sentView" class="hidden">
+    <div class="tapzone l" id="sTapL"></div>
+    <div id="sentBox"><p id="sentText"></p><p id="sentTr" class="hidden"></p></div>
+    <div class="tapzone r" id="sTapR"></div>
+  </div>
+
   <div class="bottom">
     <div class="progress">
       <span id="pChap"></span>
@@ -180,6 +209,11 @@
       <button class="nav" id="pgPrev" style="width:56px;height:56px;border-radius:50%">‹</button>
       <b id="pgInfo"></b>
       <button class="nav" id="pgNext" style="width:56px;height:56px;border-radius:50%">›</button>
+    </div>
+    <div class="pagectl hidden" id="sentCtl">
+      <button class="nav" id="sPrev" style="width:56px;height:56px;border-radius:50%" title="Önceki cümle">‹</button>
+      <button class="trbtn" id="trBtn" title="Türkçe çeviri (T)">Çeviri</button>
+      <button class="nav" id="sNext" style="width:56px;height:56px;border-radius:50%" title="Sonraki cümle">›</button>
     </div>
     <div class="controls" id="flowCtl">
       <button class="nav" id="prevBtn" title="Önceki cümle">⏮</button>
@@ -454,13 +488,19 @@ const store = (() => {
     },
     setKV: (k, v) => tx("kv","readwrite", s => s ? s.put(v, k) : (mem.kv[k] = v, null)),
     getKV: k => tx("kv","readonly", s => s ? s.get(k) : {result: mem.kv[k]}),
+    delKVPrefix: p => tx("kv","readwrite", s => {
+      if(s) return s.delete(IDBKeyRange.bound(p, p + "\uffff"));
+      for(const k of Object.keys(mem.kv)) if(k.startsWith(p)) delete mem.kv[k];
+      return null;
+    }),
   };
 })();
 
 /* =========================================================
    4. Ayarlar
    ========================================================= */
-const DEF = {wpm:300, chunk:1, fs:64, theme:"koyu", font:"serif", punct:true, ramp:true, rewind:true, mode:"flow", pfs:20, plh:1.6};
+const DEF = {wpm:300, chunk:1, fs:64, theme:"koyu", font:"serif", punct:true, ramp:true, rewind:true, mode:"flow", pfs:20, plh:1.6,
+  sfs:30, tr:false, trProv:"free", trKey:"", trModel:"claude-opus-5-5"};
 let S = {...DEF};
 async function loadSettings(){ try{ const v = await store.getKV("settings"); if(v) S = {...DEF, ...v}; }catch(e){} applySettings(); }
 function saveSettings(){ store.setKV("settings", S); }
@@ -472,6 +512,9 @@ function applySettings(){
   $("#pageCols").classList.toggle("sans", S.font === "sans");
   document.documentElement.style.setProperty("--pfs", S.pfs + "px");
   document.documentElement.style.setProperty("--plh", S.plh);
+  document.documentElement.style.setProperty("--sfs", S.sfs + "px");
+  $("#sentBox").classList.toggle("sans", S.font === "sans");
+  $("#trBtn").classList.toggle("on", !!S.tr);
   $("#wpmVal").textContent = S.wpm;
   const tc = {koyu:"#121212", sepya:"#f3ead8", acik:"#fbfbf9"}[S.theme];
   document.querySelector('meta[name="theme-color"]').content = tc;
@@ -530,7 +573,7 @@ $("#books").addEventListener("click", e => {
     e.stopPropagation();
     const card = del.closest(".book"); const t = card.querySelector(".t").textContent;
     confirmDialog(`“${t}” kütüphaneden kaldırılsın mı? EPUB dosyan silinmez.`, "Kaldır", async () => {
-      await store.delBook(del.dataset.del); await store.delPos(del.dataset.del); renderLibrary();
+      await store.delBook(del.dataset.del); await store.delPos(del.dataset.del); await store.delKVPrefix("tr:" + del.dataset.del + ":"); renderLibrary();
     });
     return;
   }
@@ -638,7 +681,9 @@ function updateProgress(){
   $("#pChap").textContent = `${c + 1}/${B.chapters.length}`;
   const pct = Math.round(100 * idx / Math.max(1, total - 1));
   const chEnd = c + 1 < B.chapters.length ? B.chapters[c + 1].start : total;
-  if(S.mode === "page"){
+  if(S.mode === "sent"){
+    $("#pLeft").textContent = `%${pct}`;
+  } else if(S.mode === "page"){
     $("#pLeft").textContent = `%${pct}`;
     $("#pgInfo").textContent = PG.total ? `Sayfa ${PG.page + 1} / ${PG.total}` : "";
   } else {
@@ -704,13 +749,14 @@ function nextSentence(){
 function jump(i){
   idx = Math.max(0, Math.min(B.words.length - 1, i));
   if(S.mode === "page"){ pageGoto(idx); savePos(true); return; }
+  if(S.mode === "sent"){ showSentence(); savePos(true); return; }
   show();
   if(!playing) renderContext();
   else { clearTimeout(timer); rampLeft = S.ramp ? 3 : 0; tick(); }
 }
 
 function renderContext(){
-  if(!B || S.mode === "page") return;
+  if(!B || S.mode !== "flow") return;
   // Mevcut paragrafı ve öncesini göster; kelimeye dokununca oraya atla
   let ps = idx - 1; while(ps >= 0 && !(B.flags[ps] & 1)) ps--; ps++;
   let pe = idx; while(pe < B.words.length - 1 && !(B.flags[pe] & 1)) pe++;
@@ -746,9 +792,9 @@ $("#slower").onclick = () => setWpm(S.wpm - 25);
 $("#faster").onclick = () => setWpm(S.wpm + 25);
 $("#scrub").addEventListener("input", e => {
   if(playing) pause(); idx = +e.target.value;
-  if(S.mode === "page") updateProgress(); else show();
+  if(S.mode === "flow") show(); else updateProgress();
 });
-$("#scrub").addEventListener("change", () => { if(S.mode === "page") pageGoto(idx); else renderContext(); savePos(true); });
+$("#scrub").addEventListener("change", () => { if(S.mode === "page") pageGoto(idx); else if(S.mode === "sent") showSentence(); else renderContext(); savePos(true); });
 
 /* =========================================================
    6b. Klasik mod (CSS sütunlarıyla sayfalama)
@@ -758,16 +804,20 @@ const PG = {chap:-1, page:0, total:0, W:0, G:48, spans:[]};
 function setMode(m){
   if(playing) pause();
   S.mode = m; saveSettings();
-  const page = m === "page";
+  const page = m === "page", sent = m === "sent", flow = !page && !sent;
   $("#reader").classList.toggle("page-mode", page);
-  ["#stage", "#context", "#flowCtl"].forEach(s => $(s).classList.toggle("hidden", page));
+  $("#reader").classList.toggle("sent-mode", sent);
+  ["#stage", "#context", "#flowCtl"].forEach(s => $(s).classList.toggle("hidden", !flow));
   ["#pageView", "#pageCtl"].forEach(s => $(s).classList.toggle("hidden", !page));
-  $("#modeBtn").textContent = page ? "Akış" : "Klasik";
+  ["#sentView", "#sentCtl"].forEach(s => $(s).classList.toggle("hidden", !sent));
+  document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
   document.body.classList.remove("chromeoff");
   if(page){ PG.chap = -1; pageGoto(idx, true); }
+  else if(sent){ showSentence(); }
   else { show(); renderContext(); }
 }
-$("#modeBtn").onclick = () => setMode(S.mode === "page" ? "flow" : "page");
+$("#modeSeg").onclick = e => { const b = e.target.closest("[data-mode]"); if(b && b.dataset.mode !== S.mode) setMode(b.dataset.mode); };
+function rerender(){ if(!B) return; if(S.mode === "page") relayoutPage(); else if(S.mode === "sent") showSentence(); else show(); }
 
 function layoutPages(c){
   const vp = $("#pageViewport"), cols = $("#pageCols");
@@ -842,16 +892,143 @@ function prevPage(){
 $("#pgNext").onclick = nextPage; $("#pgPrev").onclick = prevPage;
 $("#tapR").onclick = nextPage; $("#tapL").onclick = prevPage;
 $("#pageViewport").addEventListener("click", () => document.body.classList.toggle("chromeoff"));
-(() => {
+function addSwipe(el, next, prev){
   let x0 = null, y0 = 0;
-  const pv = $("#pageView");
-  pv.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, {passive:true});
-  pv.addEventListener("touchend", e => {
+  el.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, {passive:true});
+  el.addEventListener("touchend", e => {
     if(x0 === null) return;
     const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
-    if(Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)){ e.preventDefault(); dx < 0 ? nextPage() : prevPage(); }
+    if(Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)){ e.preventDefault(); dx < 0 ? next() : prev(); }
   });
-})();
+}
+addSwipe($("#pageView"), () => nextPage(), () => prevPage());
+/* =========================================================
+   6c. Cümle modu (cümle cümle okuma + isteğe bağlı Türkçe çeviri)
+   ========================================================= */
+const SENT_MAX = 80; // noktalaması olmayan çok uzun bölümleri parçala
+function sentenceAt(i){
+  let s = sentenceStart(i);
+  if(i - s >= SENT_MAX) s = i;
+  let e = s; while(e < B.words.length - 1 && e - s < SENT_MAX - 1 && !endsSentence(e)) e++;
+  return [s, e];
+}
+function sentenceText(s, e){ return B.words.slice(s, e + 1).join(" "); }
+function showSentence(){
+  if(!B) return;
+  const [s, e] = sentenceAt(idx);
+  idx = s;
+  $("#sentText").textContent = sentenceText(s, e);
+  $("#sentBox").scrollTop = 0;
+  updateProgress();
+  renderTranslation(s, e);
+}
+function nextSentenceS(){ const [, e] = sentenceAt(idx); if(e < B.words.length - 1){ idx = e + 1; showSentence(); savePos(true); } }
+function prevSentenceS(){ if(idx > 0){ idx = sentenceAt(idx - 1)[0]; showSentence(); savePos(true); } }
+$("#sNext").onclick = nextSentenceS; $("#sPrev").onclick = prevSentenceS;
+$("#sTapR").onclick = nextSentenceS; $("#sTapL").onclick = prevSentenceS;
+$("#sentBox").addEventListener("click", e => { if(e.target.id !== "sentTr") document.body.classList.toggle("chromeoff"); });
+addSwipe($("#sentView"), nextSentenceS, prevSentenceS);
+
+function toggleTr(){ S.tr = !S.tr; saveSettings(); applySettings(); if(B && S.mode === "sent") showSentence(); }
+$("#trBtn").onclick = toggleTr;
+$("#sentTr").onclick = () => { if($("#sentTr").classList.contains("err")) showSentence(); };
+
+const TR = {mem: new Map(), pending: new Map(), seq: 0, client: null, clientKey: ""};
+function trKey(s, e){ return `tr:${B.id}:${S.trProv === "claude" ? S.trModel : "free"}:${s}:${e}`; }
+async function getTranslation(s, e){
+  const k = trKey(s, e);
+  if(TR.mem.has(k)) return TR.mem.get(k);
+  if(TR.pending.has(k)) return TR.pending.get(k);
+  const job = (async () => {
+    const saved = await store.getKV(k);
+    if(typeof saved === "string") return saved;
+    const prev = s > 0 ? (() => { const [ps, pe] = sentenceAt(s - 1); return sentenceText(ps, pe); })() : "";
+    const out = S.trProv === "claude" ? await translateClaude(sentenceText(s, e), prev) : await translateFree(sentenceText(s, e));
+    store.setKV(k, out);
+    return out;
+  })();
+  TR.pending.set(k, job);
+  try{ const out = await job; TR.mem.set(k, out); return out; }
+  finally{ TR.pending.delete(k); }
+}
+async function renderTranslation(s, e){
+  const el = $("#sentTr");
+  const my = ++TR.seq;
+  if(!S.tr){ el.classList.add("hidden"); return; }
+  el.classList.remove("hidden", "err");
+  if((B.lang || "").toLowerCase().startsWith("tr")){ el.textContent = "Bu kitap zaten Türkçe."; return; }
+  const k = trKey(s, e);
+  el.textContent = TR.mem.has(k) ? TR.mem.get(k) : "…";
+  try{
+    const t = await getTranslation(s, e);
+    if(my !== TR.seq) return;
+    el.textContent = t;
+    // sıradaki cümleyi önceden çevir
+    if(e < B.words.length - 1){ const [ns, ne] = sentenceAt(e + 1); getTranslation(ns, ne).catch(() => {}); }
+  }catch(err){
+    if(my !== TR.seq) return;
+    el.classList.add("err");
+    el.textContent = "Çeviri alınamadı: " + (err.message || err) + " Tekrar denemek için dokun.";
+  }
+}
+
+/* Ücretsiz çeviri: MyMemory (anahtar gerekmez, günlük kotası sınırlı) */
+async function translateFree(text){
+  const src = ((B.lang || "en").split("-")[0] || "en").toLowerCase();
+  const parts = []; let cur = "";
+  for(const w of text.split(" ")){ if(cur && (cur + " " + w).length > 450){ parts.push(cur); cur = w; } else cur = cur ? cur + " " + w : w; }
+  if(cur) parts.push(cur);
+  const out = [];
+  for(const q of parts){
+    let r;
+    try{ r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(q)}&langpair=${src}|tr`); }
+    catch(e){ throw new Error("İnternet bağlantısı yok."); }
+    const j = await r.json().catch(() => null);
+    if(!j || j.responseStatus !== 200 || !j.responseData) throw new Error(j && j.quotaFinished ? "Ücretsiz çevirinin günlük kotası doldu." : "Çeviri servisi yanıt vermedi.");
+    out.push(j.responseData.translatedText);
+  }
+  return out.join(" ");
+}
+
+/* Claude ile çeviri: kullanıcının kendi API anahtarı, istek doğrudan tarayıcıdan Anthropic'e gider */
+const SDK_URL = "https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.1.0/+esm";
+const TR_SYSTEM = "Sen deneyimli bir edebi çevirmensin. Kullanıcının verdiği cümleyi doğal ve akıcı bir Türkçeye çevir. Yalnızca çeviriyi yaz: açıklama, not, tırnak ya da başlık ekleme. <onceki> etiketindeki cümle yalnızca bağlam içindir, onu çevirme. Cümle zaten Türkçeyse olduğu gibi yaz.";
+async function translateClaude(text, prev){
+  if(!S.trKey) throw new Error("Ayarlardan bir Claude API anahtarı gir.");
+  let mod;
+  try{ mod = await import(SDK_URL); }catch(e){ throw new Error("Claude kütüphanesi yüklenemedi; internet bağlantını kontrol et."); }
+  const Anthropic = mod.default;
+  if(!TR.client || TR.clientKey !== S.trKey){
+    TR.client = new Anthropic({apiKey: S.trKey, dangerouslyAllowBrowser: true});
+    TR.clientKey = S.trKey;
+  }
+  const req = {
+    model: S.trModel,
+    max_tokens: 4000,
+    output_config: {effort: "low"},
+    system: TR_SYSTEM,
+    messages: [{role: "user", content: (prev ? `<onceki>${prev}</onceki>\n\n` : "") + `<cumle>${text}</cumle>`}],
+  };
+  let res;
+  try{
+    // Opus 5.5'te güvenlik reddine karşı sunucu tarafı yedek model
+    res = S.trModel === "claude-opus-5-5"
+      ? await TR.client.beta.messages.create({...req, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default"})
+      : await TR.client.messages.create(req);
+  }catch(err){
+    if(err instanceof Anthropic.AuthenticationError) throw new Error("API anahtarı geçersiz.");
+    if(err instanceof Anthropic.PermissionDeniedError) throw new Error("Bu anahtarın bu modele erişimi yok.");
+    if(err instanceof Anthropic.RateLimitError) throw new Error("Çok sık istek gönderildi, biraz bekle.");
+    if(err instanceof Anthropic.APIConnectionError) throw new Error("İnternet bağlantısı yok.");
+    if(err instanceof Anthropic.APIError) throw new Error(`Claude hatası (${err.status || "?"}).`);
+    throw err;
+  }
+  if(res.stop_reason === "refusal") throw new Error("Claude bu cümleyi çevirmedi.");
+  const out = res.content.filter(b => b.type === "text").map(b => b.text).join("").trim();
+  if(!out) throw new Error("Boş yanıt geldi.");
+  return out;
+}
+
 function relayoutPage(){ if(B && S.mode === "page"){ const keep = idx; PG.chap = -1; pageGoto(keep); } }
 
 /* Tam ekran (tarayıcı destekliyorsa) */
@@ -880,6 +1057,13 @@ document.addEventListener("webkitfullscreenchange", FS.sync);
 document.addEventListener("keydown", e => {
   if(!B || !$("#overlay").classList.contains("hidden")) return;
   if((e.key === "f" || e.key === "F") && !e.metaKey && !e.ctrlKey && FS.can()){ e.preventDefault(); FS.toggle(); return; }
+  if(S.mode === "sent"){
+    if(e.key === "ArrowRight" || e.key === " " || e.key === "PageDown"){ e.preventDefault(); nextSentenceS(); }
+    else if(e.key === "ArrowLeft" || e.key === "PageUp"){ e.preventDefault(); prevSentenceS(); }
+    else if(e.key === "t" || e.key === "T"){ e.preventDefault(); toggleTr(); }
+    else if(e.key === "Escape") closeBook();
+    return;
+  }
   if(S.mode === "page"){
     if(e.key === "ArrowRight" || e.key === " " || e.key === "PageDown"){ e.preventDefault(); nextPage(); }
     else if(e.key === "ArrowLeft" || e.key === "PageUp"){ e.preventDefault(); prevPage(); }
@@ -893,7 +1077,7 @@ document.addEventListener("keydown", e => {
   else if(e.key === "ArrowDown"){ e.preventDefault(); setWpm(S.wpm - 25); }
   else if(e.key === "Escape") closeBook();
 });
-let rsz; window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { if(!B) return; S.mode === "page" ? relayoutPage() : show(); }, 150); });
+let rsz; window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(rerender, 150); });
 
 /* =========================================================
    7. Paneller: bölümler, ayarlar, onay
@@ -936,14 +1120,24 @@ function settingsHtml(){
   <h3>Klasik</h3>
   <div class="row"><label>Yazı boyutu</label>${range("pfs", 14, 36, 1)}</div>
   <div class="row"><label>Satır aralığı</label>${seg("plh", [[1.4,"Sık"],[1.6,"Normal"],[1.9,"Geniş"]])}</div>
-  <p class="note" style="margin-top:10px">Kısayollar: ← → ya da boşluk = sayfa çevir, F = tam ekran.</p>`;
+  <p class="note" style="margin-top:10px">Kısayollar: ← → ya da boşluk = sayfa çevir, F = tam ekran.</p>
+  <h3>Cümle</h3>
+  <div class="row"><label>Yazı boyutu</label>${range("sfs", 20, 48, 1)}</div>
+  <div class="row"><label>Çeviri servisi<small>${S.trProv === "claude" ? "Daha iyi çeviri, kendi API anahtarınla ücretli" : "Anahtar gerekmez, günlük kotası sınırlı"}</small></label>${seg("trProv", [["free","Ücretsiz"],["claude","Claude"]])}</div>
+  ${S.trProv === "claude" ? `
+  <div class="row"><label>Model</label>${seg("trModel", [["claude-opus-5-5","Opus 5.5"],["claude-haiku-5-5","Haiku 5.5"]])}</div>
+  <div class="row"><label>API anahtarı<small>Yalnızca bu tarayıcıda saklanır</small></label><input type="password" data-text="trKey" value="${esc(S.trKey)}" placeholder="sk-ant-…" autocomplete="off" spellcheck="false"></div>` : ""}
+  <p class="note" style="margin-top:10px">Kısayollar: ← → ya da boşluk = cümle, T = çeviri, F = tam ekran.</p>`;
 }
 function refreshSettings(){ $("#overlay .sheet").innerHTML = settingsHtml(); bindRanges(); }
 function bindRanges(){
   document.querySelectorAll("#overlay input[type=range]").forEach(fillRange);
+  document.querySelectorAll("#overlay [data-text]").forEach(i => i.onchange = () => {
+    S[i.dataset.text] = i.value.trim(); saveSettings(); if(B && S.mode === "sent") showSentence();
+  });
   document.querySelectorAll("#overlay [data-range]").forEach(r => r.oninput = () => {
     const k = r.dataset.range; S[k] = +r.value; r.nextElementSibling.textContent = r.value;
-    applySettings(); saveSettings(); if(B){ S.mode === "page" ? relayoutPage() : show(); }
+    applySettings(); saveSettings(); rerender();
   });
 }
 $("#setBtn").onclick = () => {
@@ -953,7 +1147,7 @@ $("#setBtn").onclick = () => {
     if(s){ const k = s.dataset.set; S[k] = isNaN(+s.dataset.v) ? s.dataset.v : +s.dataset.v; }
     else if(t){ S[t.dataset.toggle] = !S[t.dataset.toggle]; }
     else return;
-    applySettings(); saveSettings(); if(B){ S.mode === "page" ? relayoutPage() : show(); } refreshSettings();
+    applySettings(); saveSettings(); rerender(); refreshSettings();
   });
   bindRanges();
 };

@@ -8,12 +8,22 @@ Akış, tarayıcıda çalışan bir EPUB okuyucudur. Kelimeleri ekranın ortası
 
 ## Nasıl çalışır?
 
-Akış iki okuma modu sunar.
+Akış üç okuma modu sunar.
 
 - **Akış modu:** Kelimeler ekranın ortasında sırayla belirir. Her kelimenin bir harfi kırmızıdır. Gözün o harfe odaklanır, böylece gözünü kaydırmadan okursun.
 - **Klasik mod:** Kitap normal bir kitap gibi sayfalara bölünür. Sayfayı kenarlara dokunarak ya da kaydırarak çevirirsin.
+- **Cümle modu:** Ekranda her seferinde tek bir cümle görünür. **Çeviri** düğmesi açıksa cümlenin Türkçesi altında yazar.
 
-İki mod aynı yeri hatırlar. Akış modunda bıraktığın yerden klasik modda devam edebilirsin.
+Üç mod aynı yeri hatırlar. Bir modda bıraktığın yerden diğerinde devam edebilirsin.
+
+## Çeviri
+
+Cümle modunda iki çeviri servisi vardır. Seçimi ayarlardan yaparsın.
+
+- **Ücretsiz:** Anahtar gerekmez. MyMemory servisini kullanır. Günlük bir kotası vardır.
+- **Claude:** Daha doğal çeviri yapar. Kendi Anthropic API anahtarını girmen gerekir ve kullanım ücretlidir. Opus 5.5 ya da daha ucuz olan Haiku 5.5 modelini seçebilirsin.
+
+API anahtarın yalnızca senin tarayıcında saklanır. İstekler tarayıcından doğrudan Anthropic'e gider. Çevrilen cümleler kaydedilir, aynı cümle için ikinci kez istek gönderilmez.
 
 ## Özellikler
 
@@ -26,7 +36,7 @@ Akış iki okuma modu sunar.
 - Bölümler listesinden istediğin bölüme atlayabilirsin.
 - Kütüphanede kitaplar kapaklarıyla görünür. Kapağı olmayan kitaba renkli bir kapak çizilir.
 - Kütüphanede her kitabın ilerlemesi ve kalan süresi görünür.
-- Klavye kısayolları vardır: boşluk başlatır ya da durdurur, sol ve sağ ok cümle atlar, yukarı ve aşağı ok hızı değiştirir, F tam ekrana geçer.
+- Klavye kısayolları vardır: boşluk başlatır ya da durdurur, sol ve sağ ok cümle atlar, yukarı ve aşağı ok hızı değiştirir, F tam ekrana geçer. Cümle modunda T çeviriyi açıp kapatır.
 - İnternet olmadan da açılır. Ana ekrana ya da masaüstüne uygulama olarak eklenebilir.
 
 ## Kullanım
@@ -48,7 +58,7 @@ DRM korumalı kitaplar açılmaz. Satın alınmış kitapların çoğu bu türde
 | `manifest.webmanifest` | Uygulamanın adını ve ikonunu tanımlar. |
 | `icons/` | Uygulama ikonları. |
 
-Harici bir kütüphane kullanılmaz. EPUB dosyası tarayıcının kendi araçlarıyla açılır.
+EPUB dosyası tarayıcının kendi araçlarıyla açılır. Tek harici kütüphane Anthropic'in JavaScript SDK'sıdır. O da yalnızca Claude ile çeviri seçildiğinde yüklenir.
 
 ## Geliştirme
 
